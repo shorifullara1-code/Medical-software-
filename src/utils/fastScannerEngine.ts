@@ -76,10 +76,19 @@ export class FastBarcodeEngine {
   }
 
   /**
+   * Resets scanned code memory so the scanner can scan the same or new QR code repeatedly
+   */
+  public resetScannedMemory() {
+    this.lastScannedText = '';
+    this.lastScanTime = 0;
+  }
+
+  /**
    * Starts high-speed camera scanner
    */
   public async start(): Promise<void> {
     this.isScanning = true;
+    this.resetScannedMemory();
     const container = document.getElementById(this.containerId);
     if (!container) throw new Error(`Container #${this.containerId} not found`);
 
@@ -238,15 +247,24 @@ export class FastBarcodeEngine {
   }
 
   /**
-   * Triggers scan success with debounce preventing double triggers
+   * Triggers scan success with short 500ms debounce
    */
   private triggerSuccess(text: string) {
     const now = Date.now();
-    if (text === this.lastScannedText && now - this.lastScanTime < 1500) {
-      return; // Debounce 1.5s
+    // Allow re-scan after 500ms so user can scan same or new QR code repeatedly
+    if (text === this.lastScannedText && now - this.lastScanTime < 500) {
+      return;
     }
     this.lastScannedText = text;
     this.lastScanTime = now;
+
+    // Auto-clear memory after 600ms so subsequent scans always register
+    setTimeout(() => {
+      if (this.lastScannedText === text) {
+        this.lastScannedText = '';
+      }
+    }, 600);
+
     this.onScanSuccess(text);
   }
 
@@ -275,6 +293,7 @@ export class FastBarcodeEngine {
    */
   public async stop(): Promise<void> {
     this.isScanning = false;
+    this.resetScannedMemory();
 
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);

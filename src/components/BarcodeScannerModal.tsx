@@ -213,6 +213,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setScannedPatient(null);
       setSearchTerm('');
       setScanFeedback(null);
+    } else {
+      fastScannerRef.current?.resetScannedMemory();
     }
   }, [isOpen]);
 
