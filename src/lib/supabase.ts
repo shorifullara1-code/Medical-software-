@@ -27,23 +27,32 @@ export async function testSupabaseConnection(): Promise<{
   message: string;
 }> {
   try {
-    const { data, error } = await supabase.from('hospital_data_store').select('id').limit(1);
-    if (error) {
-      // If table doesn't exist yet, test RPC or auth ping
-      if (error.code === 'PGRST301' || error.message.includes('relation') || error.code === '42P01') {
-        return {
-          connected: true,
-          message: 'Connected to Supabase Project (Table setup needed)',
-        };
-      }
+    const { error: err1 } = await supabase.from('hospital_records').select('id').limit(1);
+    if (!err1) {
       return {
-        connected: false,
-        message: `Supabase Ping Error: ${error.message}`,
+        connected: true,
+        message: 'Supabase Database Connected & Operational ✓ (hospital_records)',
       };
     }
+
+    const { error: err2 } = await supabase.from('hospital_data_store').select('id').limit(1);
+    if (!err2) {
+      return {
+        connected: true,
+        message: 'Supabase Database Connected & Operational ✓ (hospital_data_store)',
+      };
+    }
+
+    if (err1.code === 'PGRST301' || err1.message.includes('relation') || err1.code === '42P01') {
+      return {
+        connected: true,
+        message: 'Connected to Supabase Project! Note: Please run the SQL script in Supabase SQL Editor if tables are missing.',
+      };
+    }
+
     return {
-      connected: true,
-      message: 'Supabase Database Connected & Operational ✓',
+      connected: false,
+      message: `Supabase Ping Note: ${err1.message}`,
     };
   } catch (err: any) {
     return {

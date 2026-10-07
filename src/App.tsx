@@ -154,12 +154,13 @@ export default function App() {
 
   // Multi-Device Cloud Realtime Sync & Polling Effect
   useEffect(() => {
-    // 1. Fetch latest state on app load
+    // 1. Fetch & merge latest state on app load
     pullAllFromSupabase().then((res) => {
       if (res.success && res.data) {
         applyCloudDataToState(res.data);
+        // Push unified merged dataset back to Supabase Cloud
+        pushAllToSupabase(res.data);
       } else {
-        // If no cloud data yet, perform initial push
         pushAllToSupabase();
       }
     });
@@ -169,14 +170,14 @@ export default function App() {
       applyCloudDataToState(newCloudData);
     });
 
-    // 3. Fallback interval polling every 5 seconds to ensure non-stop sync
+    // 3. Fallback interval polling every 4 seconds to ensure non-stop multi-device sync
     const syncInterval = setInterval(() => {
       pullAllFromSupabase().then((res) => {
         if (res.success && res.data) {
           applyCloudDataToState(res.data);
         }
       });
-    }, 5000);
+    }, 4000);
 
     return () => {
       unsubscribe();
