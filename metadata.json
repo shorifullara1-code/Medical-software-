@@ -1,0 +1,6 @@
+{
+  "name": "MedPulse Hospital Management System",
+  "description": "Comprehensive Hospital Management System & Clinic ERP with OPD, IPD Inpatient care, Lab Diagnostics, Discharge Summaries, Electronic Prescriptions, Billing, and Medical History.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
