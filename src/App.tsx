@@ -870,6 +870,7 @@ export default function App() {
         labReports={labReports}
         appointments={appointments}
         admissions={ipdAdmissions}
+        pharmacySales={pharmacySales}
         onSelectAction={handleScannerSelectAction}
         onOpenInvoicePrint={(inv) => setPrintInvoice(inv)}
         onOpenPrescriptionPrint={(rx) => setPrintPrescription(rx)}

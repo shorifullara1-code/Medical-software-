@@ -48,16 +48,65 @@ export interface FullHospitalDataPayload {
 }
 
 /**
-  Merge arrays by unique item ID so local and cloud records are combined seamlessly without losing data
+ * Smartly merges a single item from cloud and local versions so payment/due updates are never reverted
  */
-function mergeArraysById<T extends { id: string }>(primary: T[], secondary: T[]): T[] {
+function mergeSingleItem<T extends Record<string, any>>(cloudItem: T, localItem: T): T {
+  if (!cloudItem) return localItem;
+  if (!localItem) return cloudItem;
+
+  // 1. Invoices & Pharmacy Sales (financial records)
+  if ('paidAmount' in localItem && 'dueAmount' in localItem) {
+    const localPayCount = Array.isArray(localItem.paymentHistory) ? localItem.paymentHistory.length : 0;
+    const cloudPayCount = Array.isArray(cloudItem.paymentHistory) ? cloudItem.paymentHistory.length : 0;
+
+    // Item with more payments recorded is newer
+    if (localPayCount > cloudPayCount) return localItem;
+    if (cloudPayCount > localPayCount) return cloudItem;
+
+    // Item with lower due amount is newer
+    if ((localItem.dueAmount ?? 0) < (cloudItem.dueAmount ?? 0)) return localItem;
+    if ((cloudItem.dueAmount ?? 0) < (localItem.dueAmount ?? 0)) return cloudItem;
+
+    // Item with higher paid amount is newer
+    if ((localItem.paidAmount ?? 0) > (cloudItem.paidAmount ?? 0)) return localItem;
+    if ((cloudItem.paidAmount ?? 0) > (localItem.paidAmount ?? 0)) return cloudItem;
+  }
+
+  // 2. Timestamps comparison
+  const localTime = new Date(localItem.updatedAt || localItem.deliveredAt || localItem.reportedAt || localItem.date || 0).getTime();
+  const cloudTime = new Date(cloudItem.updatedAt || cloudItem.deliveredAt || cloudItem.reportedAt || cloudItem.date || 0).getTime();
+
+  if (!isNaN(localTime) && !isNaN(cloudTime) && localTime !== cloudTime) {
+    return localTime > cloudTime ? localItem : cloudItem;
+  }
+
+  // Fallback: merge properties with local taking precedence
+  return { ...cloudItem, ...localItem };
+}
+
+/**
+ * Merge arrays by unique item ID so local and cloud records are combined seamlessly without losing data or reverting payments
+ */
+function mergeArraysById<T extends { id: string }>(cloudArray: T[], localArray: T[]): T[] {
   const map = new Map<string, T>();
-  (secondary || []).forEach((item) => {
+
+  // First add all cloud items
+  (cloudArray || []).forEach((item) => {
     if (item && item.id) map.set(item.id, item);
   });
-  (primary || []).forEach((item) => {
-    if (item && item.id) map.set(item.id, item);
+
+  // Then merge local items into map using smart merge
+  (localArray || []).forEach((localItem) => {
+    if (localItem && localItem.id) {
+      const existingCloudItem = map.get(localItem.id);
+      if (existingCloudItem) {
+        map.set(localItem.id, mergeSingleItem(existingCloudItem, localItem));
+      } else {
+        map.set(localItem.id, localItem);
+      }
+    }
   });
+
   return Array.from(map.values());
 }
 

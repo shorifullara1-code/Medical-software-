@@ -293,38 +293,61 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
   const handleCollectDueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!collectDueInvoice) return;
-    const amount = Number(collectAmount);
-    if (amount <= 0 || amount > collectDueInvoice.dueAmount) {
+    const totalCollected = Number(collectAmount);
+    if (totalCollected <= 0) {
       alert('Please enter a valid collection amount.');
       return;
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const newPayment: PaymentRecord = {
-      id: `PAY-${Date.now()}`,
-      date: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      amount,
-      method: collectMethod,
-      collectedBy: currentCollectorName,
-      receiptNo: `REC-${Date.now().toString().slice(-4)}`,
-      notes: collectNotes || 'Due bill payment',
-    };
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const newPaidAmount = collectDueInvoice.paidAmount + amount;
-    const newDueAmount = Math.max(0, collectDueInvoice.dueAmount - amount);
+    // Find all invoices for this patient that have dueAmount > 0, putting selected invoice first
+    const patientDueInvoices = invoices.filter(
+      (i) => i.patientId === collectDueInvoice.patientId && i.dueAmount > 0
+    );
+    // Ensure collectDueInvoice is first in line
+    const sortedDueInvoices = [
+      collectDueInvoice,
+      ...patientDueInvoices.filter((i) => i.id !== collectDueInvoice.id),
+    ];
 
-    const updatedInvoice: Invoice = {
-      ...collectDueInvoice,
-      paidAmount: newPaidAmount,
-      dueAmount: newDueAmount,
-      status: newDueAmount === 0 ? 'paid' : 'partial',
-      paymentHistory: [...collectDueInvoice.paymentHistory, newPayment],
-    };
+    let remainingToDistribute = totalCollected;
+    let lastUpdatedInvoice = collectDueInvoice;
 
-    onUpdateInvoice(updatedInvoice);
+    sortedDueInvoices.forEach((inv) => {
+      if (remainingToDistribute <= 0) return;
+
+      const payForThisInv = Math.min(remainingToDistribute, inv.dueAmount);
+      const newPaid = inv.paidAmount + payForThisInv;
+      const newDue = Math.max(0, inv.dueAmount - payForThisInv);
+
+      const paymentRec: PaymentRecord = {
+        id: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        date: `${todayStr} ${timeStr}`,
+        amount: payForThisInv,
+        method: collectMethod,
+        collectedBy: currentCollectorName,
+        receiptNo: `REC-${Date.now().toString().slice(-4)}`,
+        notes: collectNotes || 'Due bill payment',
+      };
+
+      const updatedInv: Invoice = {
+        ...inv,
+        paidAmount: newPaid,
+        dueAmount: newDue,
+        status: newDue === 0 ? 'paid' : 'partial',
+        paymentHistory: [...(inv.paymentHistory || []), paymentRec],
+      };
+
+      onUpdateInvoice(updatedInv);
+      remainingToDistribute -= payForThisInv;
+      lastUpdatedInvoice = updatedInv;
+    });
+
     setCollectDueInvoice(null);
     onClearInitialDue?.();
-    onOpenPrint(updatedInvoice);
+    onOpenPrint(lastUpdatedInvoice);
   };
 
   const matchingCatalogTests = testCatalog.filter((t) => {

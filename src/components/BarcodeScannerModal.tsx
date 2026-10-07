@@ -27,7 +27,7 @@ import {
   Volume2,
   Pill,
 } from 'lucide-react';
-import { Patient, Invoice, Prescription, LabReport, Appointment, IPDAdmission } from '../types';
+import { Patient, Invoice, Prescription, LabReport, Appointment, IPDAdmission, PharmacySale } from '../types';
 import { BarcodeRenderer } from './BarcodeRenderer';
 import { calculate24HourBedRent, getPatientFinancialSummary } from '../utils/bedRentBilling';
 import { matchScannedEntity, playScanBeep } from '../utils/scanParser';
@@ -43,6 +43,7 @@ interface BarcodeScannerModalProps {
   labReports: LabReport[];
   appointments: Appointment[];
   admissions?: IPDAdmission[];
+  pharmacySales?: PharmacySale[];
   onSelectAction?: (action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd' | 'pharmacy', patientId: string) => void;
   onOpenInvoicePrint?: (invoice: Invoice) => void;
   onOpenPrescriptionPrint?: (prescription: Prescription) => void;
@@ -60,6 +61,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   labReports,
   appointments,
   admissions = [],
+  pharmacySales = [],
   onSelectAction,
   onOpenInvoicePrint,
   onOpenPrescriptionPrint,
@@ -228,7 +230,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const patientAppointments = scannedPatient ? appointments.filter((a) => a.patientId === scannedPatient.id) : [];
 
   const financialSummary = scannedPatient
-    ? getPatientFinancialSummary(scannedPatient.id, invoices, admissions)
+    ? getPatientFinancialSummary(scannedPatient.id, invoices, admissions, pharmacySales)
     : null;
 
   const totalPatientDue = financialSummary?.grandTotalOutstandingDue || 0;

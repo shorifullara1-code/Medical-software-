@@ -126,32 +126,46 @@ export const ReportDeliveryView: React.FC<ReportDeliveryViewProps> = ({
     e.preventDefault();
     if (!dueInvoiceToPay || payAmount <= 0) return;
 
-    const amountToCollect = Math.min(payAmount, dueInvoiceToPay.dueAmount);
-    const newPaid = dueInvoiceToPay.paidAmount + amountToCollect;
-    const newDue = Math.max(0, dueInvoiceToPay.dueAmount - amountToCollect);
-
+    let remainingToDistribute = payAmount;
     const now = new Date();
     const formattedDate = `${now.toISOString().split('T')[0]} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    const newPaymentRecord: PaymentRecord = {
-      id: `PAY-DEL-${Date.now()}`,
-      date: formattedDate,
-      amount: amountToCollect,
-      method: payMethod,
-      collectedBy: currentUser.name,
-      receiptNo: `REC-${Date.now().toString().slice(-4)}`,
-      notes: payNote,
-    };
+    // Find all due invoices for selected patient
+    const patientDueInvoices = patientInvoices.filter((i) => i.dueAmount > 0);
+    const sortedDueInvoices = [
+      dueInvoiceToPay,
+      ...patientDueInvoices.filter((i) => i.id !== dueInvoiceToPay.id),
+    ];
 
-    const updatedInvoice: Invoice = {
-      ...dueInvoiceToPay,
-      paidAmount: newPaid,
-      dueAmount: newDue,
-      status: newDue === 0 ? 'paid' : 'partial',
-      paymentHistory: [...(dueInvoiceToPay.paymentHistory || []), newPaymentRecord],
-    };
+    sortedDueInvoices.forEach((inv) => {
+      if (remainingToDistribute <= 0) return;
 
-    onUpdateInvoice(updatedInvoice);
+      const payForThis = Math.min(remainingToDistribute, inv.dueAmount);
+      const newPaid = inv.paidAmount + payForThis;
+      const newDue = Math.max(0, inv.dueAmount - payForThis);
+
+      const newPaymentRecord: PaymentRecord = {
+        id: `PAY-DEL-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        date: formattedDate,
+        amount: payForThis,
+        method: payMethod,
+        collectedBy: currentUser.name,
+        receiptNo: `REC-${Date.now().toString().slice(-4)}`,
+        notes: payNote,
+      };
+
+      const updatedInvoice: Invoice = {
+        ...inv,
+        paidAmount: newPaid,
+        dueAmount: newDue,
+        status: newDue === 0 ? 'paid' : 'partial',
+        paymentHistory: [...(inv.paymentHistory || []), newPaymentRecord],
+      };
+
+      onUpdateInvoice(updatedInvoice);
+      remainingToDistribute -= payForThis;
+    });
+
     setIsCollectDueOpen(false);
     setDueInvoiceToPay(null);
   };
