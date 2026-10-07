@@ -308,7 +308,7 @@ export default function App() {
   };
 
   const handleScannerSelectAction = (
-    action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd',
+    action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd' | 'pharmacy',
     patientId: string
   ) => {
     setTargetPatientId(patientId);
@@ -322,6 +322,7 @@ export default function App() {
     else if (action === 'delivery') setActiveTab('delivery');
     else if (action === 'appointment') setActiveTab('appointments');
     else if (action === 'ipd') setActiveTab('ipd');
+    else if (action === 'pharmacy') setActiveTab('pharmacy');
   };
 
   const handleSavePharmacySale = (newSale: PharmacySale, updatedMeds: PharmacyMedicine[]) => {
@@ -715,6 +716,8 @@ export default function App() {
                 onUpdateMedicines={handleUpdatePharmacyMedicines}
                 onOpenPrintSlip={(sale) => setPrintPharmacySale(sale)}
                 onNavigateToIPD={() => setActiveTab('ipd')}
+                preselectedPatientId={targetPatientId}
+                onClearPreselectedPatient={() => setTargetPatientId(null)}
               />
             )}
 
@@ -735,6 +738,8 @@ export default function App() {
                 }}
                 initialDueInvoice={targetDueInvoice}
                 onClearInitialDue={() => setTargetDueInvoice(null)}
+                preselectedPatientId={targetPatientId}
+                onClearPreselectedPatient={() => setTargetPatientId(null)}
               />
             )}
 

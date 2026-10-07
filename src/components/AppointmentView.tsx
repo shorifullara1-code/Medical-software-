@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   PlusCircle,
   Search,
   Clock,
   FileText,
-  Printer
+  Printer,
+  Scan,
 } from 'lucide-react';
 import { Appointment, Patient, Staff } from '../types';
 
@@ -39,6 +40,13 @@ export const AppointmentView: React.FC<AppointmentViewProps> = ({
   const [isBookModalOpen, setIsBookModalOpen] = useState(Boolean(preselectedPatientId));
 
   const [selectedPatientId, setSelectedPatientId] = useState<string>(preselectedPatientId || (patients[0]?.id ?? ''));
+
+  useEffect(() => {
+    if (preselectedPatientId) {
+      setSelectedPatientId(preselectedPatientId);
+      setIsBookModalOpen(true);
+    }
+  }, [preselectedPatientId]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
     staff.find((s) => s.role === 'doctor')?.id || ''
   );
@@ -134,6 +142,14 @@ export const AppointmentView: React.FC<AppointmentViewProps> = ({
               Completed
             </button>
           </div>
+
+          <button
+            onClick={onOpenScanner}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <Scan className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Barcode Scan</span>
+          </button>
 
           <button
             onClick={() => {

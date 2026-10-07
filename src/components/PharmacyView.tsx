@@ -62,6 +62,8 @@ interface PharmacyViewProps {
   onUpdateMedicines: (medicines: PharmacyMedicine[]) => void;
   onOpenPrintSlip: (sale: PharmacySale) => void;
   onNavigateToIPD?: () => void;
+  preselectedPatientId?: string | null;
+  onClearPreselectedPatient?: () => void;
 }
 
 export const PharmacyView: React.FC<PharmacyViewProps> = ({
@@ -76,6 +78,8 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
   onUpdateMedicines,
   onOpenPrintSlip,
   onNavigateToIPD,
+  preselectedPatientId,
+  onClearPreselectedPatient,
 }) => {
   const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'sales'>('pos');
 
@@ -166,6 +170,18 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
       )
       .slice(0, 6);
   }, [activeAdmissions, patientSearchInput]);
+
+    // Auto Select Patient if passed via preselectedPatientId from global Barcode Scanner
+  useEffect(() => {
+    if (preselectedPatientId) {
+      const found = patients.find((p) => p.id === preselectedPatientId);
+      if (found) {
+        handleSelectPatientByObject(found);
+        setPatientSearchInput(found.id);
+        setActiveTab('pos');
+      }
+    }
+  }, [preselectedPatientId, patients]);
 
   // Select patient by Patient object (Automates Indoor vs Outdoor fill)
   const handleSelectPatientByObject = (patient: Patient) => {

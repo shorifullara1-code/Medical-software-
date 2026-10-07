@@ -25,6 +25,7 @@ import {
   Clock,
   Upload,
   Volume2,
+  Pill,
 } from 'lucide-react';
 import { Patient, Invoice, Prescription, LabReport, Appointment, IPDAdmission } from '../types';
 import { BarcodeRenderer } from './BarcodeRenderer';
@@ -42,7 +43,7 @@ interface BarcodeScannerModalProps {
   labReports: LabReport[];
   appointments: Appointment[];
   admissions?: IPDAdmission[];
-  onSelectAction?: (action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd', patientId: string) => void;
+  onSelectAction?: (action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd' | 'pharmacy', patientId: string) => void;
   onOpenInvoicePrint?: (invoice: Invoice) => void;
   onOpenPrescriptionPrint?: (prescription: Prescription) => void;
   onOpenLabReportPrint?: (report: LabReport) => void;
@@ -569,6 +570,17 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                 >
                   <Calendar className="w-4 h-4" />
                   Schedule Appointment
+                </button>
+
+                <button
+                  onClick={() => {
+                    onSelectAction?.('pharmacy', scannedPatient.id);
+                    onClose();
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                >
+                  <Pill className="w-4 h-4 text-emerald-300" />
+                  Pharmacy Dispense
                 </button>
 
                 <button

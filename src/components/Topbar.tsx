@@ -68,7 +68,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         {totalDueAmount > 0 && (
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono">
             <span>Total Dues:</span>
-            <span>${totalDueAmount.toLocaleString()}</span>
+            <span>BDT {totalDueAmount.toLocaleString()}</span>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Receipt,
   PlusCircle,
@@ -21,6 +21,7 @@ import {
   Bed,
   Clock,
   ExternalLink,
+  Scan,
 } from 'lucide-react';
 import { Invoice, Patient, BillingItem, PaymentRecord, LabTestCatalogItem, Staff, IPDAdmission } from '../types';
 import { calculate24HourBedRent, getPatientFinancialSummary } from '../utils/bedRentBilling';
@@ -41,6 +42,8 @@ interface BillingCenterViewProps {
   onOpenAdmissionSlipPrint?: (admission: IPDAdmission) => void;
   initialDueInvoice?: Invoice | null;
   onClearInitialDue?: () => void;
+  preselectedPatientId?: string | null;
+  onClearPreselectedPatient?: () => void;
 }
 
 export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
@@ -59,9 +62,23 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
   onOpenAdmissionSlipPrint,
   initialDueInvoice,
   onClearInitialDue,
+  preselectedPatientId,
+  onClearPreselectedPatient,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'due' | 'paid'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-fill when preselectedPatientId changes
+  useEffect(() => {
+    if (preselectedPatientId) {
+      setSearchQuery(preselectedPatientId);
+      const invWithDue = invoices.find((i) => i.patientId === preselectedPatientId && i.dueAmount > 0);
+      if (invWithDue) {
+        setCollectDueInvoice(invWithDue);
+        setCollectAmount(invWithDue.dueAmount);
+      }
+    }
+  }, [preselectedPatientId, invoices]);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -353,6 +370,14 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
               className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
+
+          <button
+            onClick={onOpenScanner}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+          >
+            <Scan className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Barcode Scan</span>
+          </button>
 
           {/* Filter Pills */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
