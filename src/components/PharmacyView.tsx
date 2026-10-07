@@ -48,6 +48,7 @@ import {
 } from '../types';
 import { MedicineBarcodePrintModal } from './PrintModals/MedicineBarcodePrintModal';
 import { matchScannedEntity, playScanBeep } from '../utils/scanParser';
+import { FastBarcodeEngine } from '../utils/fastScannerEngine';
 
 interface PharmacyViewProps {
   medicines: PharmacyMedicine[];
@@ -130,7 +131,7 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
   const [isPharmacyScannerOpen, setIsPharmacyScannerOpen] = useState<boolean>(false);
   const [scanFeedbackMsg, setScanFeedbackMsg] = useState<string | null>(null);
   const [barcodeStickerMed, setBarcodeStickerMed] = useState<PharmacyMedicine | null>(null);
-  const pharmacyScannerRef = useRef<Html5Qrcode | null>(null);
+  const pharmacyScannerRef = useRef<FastBarcodeEngine | null>(null);
 
   // Active Inpatients List
   const activeAdmissions = useMemo(() => {
@@ -279,35 +280,35 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTab, activeAdmissions, patients, medicines]);
 
-  // Live Camera Scanner Initialization
+  // Live High-Speed Camera Scanner Initialization
   useEffect(() => {
-    let html5QrCode: Html5Qrcode | null = null;
     if (isPharmacyScannerOpen) {
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         try {
-          html5QrCode = new Html5Qrcode('pharmacy-pos-camera-region');
-          pharmacyScannerRef.current = html5QrCode;
-          html5QrCode
-            .start(
-              { facingMode: 'environment' },
-              { fps: 10, qrbox: { width: 220, height: 220 } },
-              (decodedText) => {
-                handleBarcodeScannedInPharmacy(decodedText);
-              },
-              () => {}
-            )
-            .catch((err) => {
-              console.warn('Pharmacy Camera init error:', err);
-            });
+          if (pharmacyScannerRef.current) {
+            await pharmacyScannerRef.current.stop();
+            pharmacyScannerRef.current = null;
+          }
+
+          const engine = new FastBarcodeEngine({
+            containerId: 'pharmacy-pos-camera-region',
+            onScanSuccess: (decodedText) => {
+              handleBarcodeScannedInPharmacy(decodedText);
+            },
+          });
+
+          pharmacyScannerRef.current = engine;
+          await engine.start();
         } catch (e) {
-          console.warn('Pharmacy Camera exception:', e);
+          console.warn('Pharmacy Fast Scanner init error:', e);
         }
-      }, 250);
+      }, 150);
 
       return () => {
         clearTimeout(timer);
-        if (pharmacyScannerRef.current && pharmacyScannerRef.current.isScanning) {
+        if (pharmacyScannerRef.current) {
           pharmacyScannerRef.current.stop().catch(() => {});
+          pharmacyScannerRef.current = null;
         }
       };
     }

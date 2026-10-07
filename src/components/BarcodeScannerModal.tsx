@@ -30,6 +30,8 @@ import { Patient, Invoice, Prescription, LabReport, Appointment, IPDAdmission } 
 import { BarcodeRenderer } from './BarcodeRenderer';
 import { calculate24HourBedRent, getPatientFinancialSummary } from '../utils/bedRentBilling';
 import { matchScannedEntity, playScanBeep } from '../utils/scanParser';
+import { FastBarcodeEngine } from '../utils/fastScannerEngine';
+import { Zap } from 'lucide-react';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -68,7 +70,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [scannedPatient, setScannedPatient] = useState<Patient | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [isTorchSupported, setIsTorchSupported] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const fastScannerRef = useRef<FastBarcodeEngine | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const html5QrCodeRegionId = 'interactive-barcode-reader';
 
@@ -153,52 +157,27 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   const startCamera = async () => {
     setIsCameraActive(true);
-    setScanFeedback('Starting camera preview...');
+    setScanFeedback('Starting 60 FPS hardware scanner engine...');
 
     setTimeout(async () => {
       try {
-        const element = document.getElementById(html5QrCodeRegionId);
-        if (!element) {
-          setIsCameraActive(false);
-          setScanFeedback('Camera container element missing.');
-          return;
+        if (fastScannerRef.current) {
+          await fastScannerRef.current.stop();
+          fastScannerRef.current = null;
         }
 
-        if (scannerRef.current) {
-          try {
-            if (scannerRef.current.isScanning) {
-              await scannerRef.current.stop();
-            }
-            await scannerRef.current.clear();
-          } catch (e) {
-            // ignore
-          }
-          scannerRef.current = null;
-        }
-
-        const scanner = new Html5Qrcode(html5QrCodeRegionId);
-        scannerRef.current = scanner;
-
-        const config = {
-          fps: 15,
-          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
-            width: Math.min(viewfinderWidth - 20, 280),
-            height: Math.min(viewfinderHeight - 20, 180),
-          }),
-          aspectRatio: 1.5,
-        };
-
-        await scanner.start(
-          { facingMode: 'environment' },
-          config,
-          (decodedText) => {
+        const engine = new FastBarcodeEngine({
+          containerId: html5QrCodeRegionId,
+          onScanSuccess: (decodedText) => {
             handleBarcodeScanned(decodedText);
           },
-          () => {
-            // normal frame decode
-          }
-        );
-        setScanFeedback('Camera Ready: Hold QR code or barcode inside frame');
+        });
+
+        fastScannerRef.current = engine;
+        await engine.start();
+
+        setIsTorchSupported(engine.torchSupported);
+        setScanFeedback('⚡ High-Speed Hardware Scanner Active: Instant detection ready!');
       } catch (err: any) {
         console.error('Camera barcode scanner error:', err);
         setIsCameraActive(false);
@@ -209,22 +188,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           setScanFeedback('Could not start camera. Search using manual ID or upload image.');
         }
       }
-    }, 120);
+    }, 100);
+  };
+
+  const toggleFlashlight = async () => {
+    if (fastScannerRef.current) {
+      const active = await fastScannerRef.current.toggleTorch();
+      setIsTorchOn(active);
+    }
   };
 
   const stopCamera = async () => {
-    if (scannerRef.current) {
-      try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
-        }
-        await scannerRef.current.clear();
-      } catch (err) {
-        console.warn('Error stopping scanner:', err);
-      }
-      scannerRef.current = null;
+    if (fastScannerRef.current) {
+      await fastScannerRef.current.stop();
+      fastScannerRef.current = null;
     }
     setIsCameraActive(false);
+    setIsTorchOn(false);
   };
 
   useEffect(() => {
@@ -315,6 +295,22 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               <Upload className="w-4 h-4 text-slate-700" />
               <span>Upload Image</span>
             </button>
+
+            {isCameraActive && isTorchSupported && (
+              <button
+                type="button"
+                onClick={toggleFlashlight}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isTorchOn
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-400/30'
+                    : 'bg-slate-800 text-amber-300 border border-slate-700 hover:bg-slate-700'
+                }`}
+                title="Toggle Camera Flashlight / Torch"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>{isTorchOn ? 'Torch ON' : 'Torch Off'}</span>
+              </button>
+            )}
 
             {!isCameraActive ? (
               <button
