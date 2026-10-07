@@ -23,10 +23,13 @@ import {
   Lock,
   Bed,
   Clock,
+  Upload,
+  Volume2,
 } from 'lucide-react';
 import { Patient, Invoice, Prescription, LabReport, Appointment, IPDAdmission } from '../types';
 import { BarcodeRenderer } from './BarcodeRenderer';
 import { calculate24HourBedRent, getPatientFinancialSummary } from '../utils/bedRentBilling';
+import { matchScannedEntity, playScanBeep } from '../utils/scanParser';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -66,96 +69,98 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const html5QrCodeRegionId = 'interactive-barcode-reader';
 
-  // Handle hardware barcode scanner inputs
+  // Handle hardware barcode scanner inputs (works globally)
   useEffect(() => {
     let buffer = '';
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA';
-      
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 100) {
+      if (currentTime - lastKeyTime > 120) {
         buffer = '';
       }
       lastKeyTime = currentTime;
 
       if (e.key === 'Enter') {
-        if (buffer.length >= 4) {
+        if (buffer.trim().length >= 3) {
           handleBarcodeScanned(buffer.trim());
           buffer = '';
         }
-      } else if (e.key.length === 1 && !isInput) {
+      } else if (e.key.length === 1) {
         buffer += e.key;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [patients, isOpen]);
+  }, [patients, invoices, prescriptions, labReports, admissions, isOpen]);
 
   const handleBarcodeScanned = (code: string) => {
-    const clean = code.trim().toUpperCase();
-    setScanFeedback(`Scanned Code: ${clean}`);
+    if (!code || !code.trim()) return;
+    const result = matchScannedEntity(
+      code,
+      patients,
+      [],
+      invoices,
+      prescriptions,
+      labReports,
+      admissions
+    );
 
-    // Try finding by Patient ID, Phone, or partial match
-    let found = patients.find(p => p.id.toUpperCase() === clean || p.phone.replace(/[^0-9]/g, '') === clean.replace(/[^0-9]/g, ''));
-    
-    // If code is an Invoice ID (e.g. INV-2026-1001)
-    if (!found) {
-      const matchedInv = invoices.find(inv => inv.id.toUpperCase() === clean);
-      if (matchedInv) {
-        found = patients.find(p => p.id === matchedInv.patientId);
-      }
-    }
+    setScanFeedback(result.message);
 
-    // If code is a Prescription ID (e.g. RX-2026-001)
-    if (!found) {
-      const matchedRx = prescriptions.find(rx => rx.id.toUpperCase() === clean);
-      if (matchedRx) {
-        found = patients.find(p => p.id === matchedRx.patientId);
-      }
-    }
-
-    // If code is a Lab report ID
-    if (!found) {
-      const matchedLab = labReports.find(lab => lab.id.toUpperCase() === clean);
-      if (matchedLab) {
-        found = patients.find(p => p.id === matchedLab.patientId);
-      }
-    }
-
-    if (found) {
-      setScannedPatient(found);
-      setSearchTerm(found.id);
+    if (result.patient) {
+      setScannedPatient(result.patient);
+      setSearchTerm(result.patient.id);
       stopCamera();
-    } else {
-      // Try loose match
-      const loose = patients.find(p => p.id.toLowerCase().includes(clean.toLowerCase()) || p.name.toLowerCase().includes(clean.toLowerCase()));
-      if (loose) {
-        setScannedPatient(loose);
-        setSearchTerm(loose.id);
+    } else if (result.admission) {
+      const foundP = patients.find((p) => p.id === result.admission?.patientId);
+      if (foundP) {
+        setScannedPatient(foundP);
+        setSearchTerm(foundP.id);
         stopCamera();
-      } else {
-        setScanFeedback(`No patient record found for (${clean})`);
       }
+    }
+  };
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanFeedback('Scanning QR Code image file...');
+    try {
+      const tempReaderId = 'qr-image-file-temp-reader';
+      let element = document.getElementById(tempReaderId);
+      if (!element) {
+        element = document.createElement('div');
+        element.id = tempReaderId;
+        element.style.display = 'none';
+        document.body.appendChild(element);
+      }
+
+      const html5QrCode = new Html5Qrcode(tempReaderId);
+      const decodedText = await html5QrCode.scanFile(file, true);
+      handleBarcodeScanned(decodedText);
+      html5QrCode.clear();
+    } catch (err: any) {
+      console.warn('Scan file error:', err);
+      playScanBeep(false);
+      setScanFeedback('Could not detect scannable QR / Barcode in uploaded image.');
     }
   };
 
   const startCamera = async () => {
     setIsCameraActive(true);
-    setScanFeedback('Starting camera...');
+    setScanFeedback('Starting camera preview...');
 
     setTimeout(async () => {
       try {
         const element = document.getElementById(html5QrCodeRegionId);
         if (!element) {
-          console.warn(`Element with ID ${html5QrCodeRegionId} not found`);
           setIsCameraActive(false);
-          setScanFeedback('Camera frame not found. Use manual ID search.');
+          setScanFeedback('Camera container element missing.');
           return;
         }
 
@@ -174,32 +179,37 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         const scanner = new Html5Qrcode(html5QrCodeRegionId);
         scannerRef.current = scanner;
 
+        const config = {
+          fps: 15,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
+            width: Math.min(viewfinderWidth - 20, 280),
+            height: Math.min(viewfinderHeight - 20, 180),
+          }),
+          aspectRatio: 1.5,
+        };
+
         await scanner.start(
           { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.5,
-          },
+          config,
           (decodedText) => {
             handleBarcodeScanned(decodedText);
           },
           () => {
-            // frame decode failures normal
+            // normal frame decode
           }
         );
-        setScanFeedback('Camera active: Align barcode inside frame');
+        setScanFeedback('Camera Ready: Hold QR code or barcode inside frame');
       } catch (err: any) {
         console.error('Camera barcode scanner error:', err);
         setIsCameraActive(false);
         const errMsg = err?.message || '';
         if (errMsg.includes('NotAllowedError') || errMsg.includes('Permission')) {
-          setScanFeedback('Camera permission denied. Please allow camera access in browser settings.');
+          setScanFeedback('Camera permission denied. Please enable camera access in browser settings.');
         } else {
-          setScanFeedback('Could not start camera. Search using manual ID.');
+          setScanFeedback('Could not start camera. Search using manual ID or upload image.');
         }
       }
-    }, 100);
+    }, 120);
   };
 
   const stopCamera = async () => {
@@ -272,32 +282,57 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Enter Patient ID (e.g. P-2026-001), Bill or Prescription No..."
+              placeholder="Scan or Type Patient ID (e.g. P-2026-001), Bill / Prescription No..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 handleBarcodeScanned(e.target.value);
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleBarcodeScanned(searchTerm);
+                }
+              }}
+              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-semibold"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFileUpload}
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Upload QR Code or Barcode image file from gallery"
+            >
+              <Upload className="w-4 h-4 text-slate-700" />
+              <span>Upload Image</span>
+            </button>
+
             {!isCameraActive ? (
               <button
+                type="button"
                 onClick={startCamera}
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <Camera className="w-4 h-4" />
-                Start Camera Scanner
+                <span>Start Camera Scanner</span>
               </button>
             ) : (
               <button
+                type="button"
                 onClick={stopCamera}
                 className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <CameraOff className="w-4 h-4" />
-                Stop Camera
+                <span>Stop Camera</span>
               </button>
             )}
           </div>

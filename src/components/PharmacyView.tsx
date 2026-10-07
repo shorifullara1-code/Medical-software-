@@ -33,6 +33,8 @@ import {
   X,
   Check,
   Tag,
+  Upload,
+  Volume2,
 } from 'lucide-react';
 import {
   PharmacyMedicine,
@@ -45,6 +47,7 @@ import {
   HospitalSettings,
 } from '../types';
 import { MedicineBarcodePrintModal } from './PrintModals/MedicineBarcodePrintModal';
+import { matchScannedEntity, playScanBeep } from '../utils/scanParser';
 
 interface PharmacyViewProps {
   medicines: PharmacyMedicine[];
@@ -208,94 +211,73 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
     setScanFeedbackMsg(`Inpatient Linked: ${adm.patientName} (${adm.bedNumber} - ${adm.wardType})`);
   };
 
-  // Handle scanned barcode (from Camera or USB hardware scanner)
+  // Handle scanned barcode / QR code (from Camera, Image file or USB hardware scanner)
   const handleBarcodeScannedInPharmacy = (code: string) => {
-    const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) return;
-
-    // 1. Check if barcode matches a Medicine Code or ID in Stock (Adds medicine to checkout cart with price!)
-    const matchedMedicine = medicines.find(
-      (m) =>
-        m.code.toUpperCase() === cleanCode ||
-        m.id.toUpperCase() === cleanCode ||
-        m.batchNo.toUpperCase() === cleanCode ||
-        cleanCode.includes(m.code.toUpperCase())
+    if (!code || !code.trim()) return;
+    const result = matchScannedEntity(
+      code,
+      patients,
+      medicines,
+      [],
+      prescriptions,
+      [],
+      activeAdmissions
     );
 
-    if (matchedMedicine) {
-      if (matchedMedicine.stockQuantity <= 0) {
-        setScanFeedbackMsg(`⚠️ Out of Stock Warning: '${matchedMedicine.name}' has 0 stock remaining!`);
+    setScanFeedbackMsg(result.message);
+
+    if (result.type === 'medicine' && result.medicine) {
+      if (result.medicine.stockQuantity <= 0) {
+        setScanFeedbackMsg(`⚠️ Stock Warning: '${result.medicine.name}' has 0 stock left!`);
         return;
       }
-      handleAddToCart(matchedMedicine);
-      setScanFeedbackMsg(`✓ Added Medicine to Cart: ${matchedMedicine.name} @ BDT ${matchedMedicine.unitPrice}`);
+      handleAddToCart(result.medicine);
       setIsPharmacyScannerOpen(false);
       return;
     }
 
-    // 2. Check if matches active Inpatient Admission ID or Patient ID in IPD
-    const matchedAdm = activeAdmissions.find(
-      (a) =>
-        a.id.toUpperCase() === cleanCode ||
-        a.patientId.toUpperCase() === cleanCode ||
-        cleanCode.includes(a.id.toUpperCase()) ||
-        cleanCode.includes(a.patientId.toUpperCase())
-    );
-
-    if (matchedAdm) {
-      handleSelectAdmissionByObject(matchedAdm);
-      setPatientSearchInput(matchedAdm.patientId);
+    if (result.type === 'admission' && result.admission) {
+      handleSelectAdmissionByObject(result.admission);
+      setPatientSearchInput(result.admission.patientId);
       setIsPharmacyScannerOpen(false);
       return;
     }
 
-    // 3. Check if matches a registered hospital Patient ID or Phone
-    const matchedPatient = patients.find(
-      (p) =>
-        p.id.toUpperCase() === cleanCode ||
-        cleanCode.includes(p.id.toUpperCase()) ||
-        p.phone.replaceAll('-', '').includes(cleanCode.replaceAll('-', ''))
-    );
-
-    if (matchedPatient) {
-      handleSelectPatientByObject(matchedPatient);
-      setPatientSearchInput(matchedPatient.id);
+    const matchedP = result.patient;
+    if (matchedP) {
+      handleSelectPatientByObject(matchedP);
+      setPatientSearchInput(matchedP.id);
       setIsPharmacyScannerOpen(false);
       return;
     }
-
-    setScanFeedbackMsg(`Notice: No matching medicine, patient or admission found for barcode '${code}'`);
   };
 
-  // USB Hardware Barcode Scanner Listener in Pharmacy POS
+  // USB / Bluetooth Hardware Barcode Scanner Listener in Pharmacy POS
   useEffect(() => {
     if (activeTab !== 'pos') return;
     let buffer = '';
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA';
-
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 100) {
+      if (currentTime - lastKeyTime > 120) {
         buffer = '';
       }
       lastKeyTime = currentTime;
 
       if (e.key === 'Enter') {
-        if (buffer.length >= 3) {
+        if (buffer.trim().length >= 2) {
           handleBarcodeScannedInPharmacy(buffer.trim());
           buffer = '';
         }
-      } else if (e.key.length === 1 && !isInput) {
+      } else if (e.key.length === 1) {
         buffer += e.key;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, activeAdmissions, patients]);
+  }, [activeTab, activeAdmissions, patients, medicines]);
 
   // Live Camera Scanner Initialization
   useEffect(() => {
