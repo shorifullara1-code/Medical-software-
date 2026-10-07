@@ -33,6 +33,7 @@ interface ReportDeliveryViewProps {
   onOpenScanner: () => void;
   preselectedPatientId?: string | null;
   onClearPreselectedPatient?: () => void;
+  onBatchUpdateInvoices?: (invoices: Invoice[]) => void;
 }
 
 export const ReportDeliveryView: React.FC<ReportDeliveryViewProps> = ({
@@ -42,6 +43,7 @@ export const ReportDeliveryView: React.FC<ReportDeliveryViewProps> = ({
   staff,
   currentUser,
   onUpdateInvoice,
+  onBatchUpdateInvoices,
   onUpdateLabReport,
   onOpenPrintReport,
   onOpenScanner,
@@ -137,12 +139,13 @@ export const ReportDeliveryView: React.FC<ReportDeliveryViewProps> = ({
       ...patientDueInvoices.filter((i) => i.id !== dueInvoiceToPay.id),
     ];
 
+    const updatedInvoicesList: Invoice[] = [];
     sortedDueInvoices.forEach((inv) => {
       if (remainingToDistribute <= 0) return;
 
       const payForThis = Math.min(remainingToDistribute, inv.dueAmount);
-      const newPaid = inv.paidAmount + payForThis;
-      const newDue = Math.max(0, inv.dueAmount - payForThis);
+      const newPaid = Number((inv.paidAmount + payForThis).toFixed(2));
+      const newDue = Number(Math.max(0, inv.dueAmount - payForThis).toFixed(2));
 
       const newPaymentRecord: PaymentRecord = {
         id: `PAY-DEL-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
@@ -162,12 +165,19 @@ export const ReportDeliveryView: React.FC<ReportDeliveryViewProps> = ({
         paymentHistory: [...(inv.paymentHistory || []), newPaymentRecord],
       };
 
-      onUpdateInvoice(updatedInvoice);
+      updatedInvoicesList.push(updatedInvoice);
       remainingToDistribute -= payForThis;
     });
 
+    if (onBatchUpdateInvoices) {
+      onBatchUpdateInvoices(updatedInvoicesList);
+    } else {
+      updatedInvoicesList.forEach((inv) => onUpdateInvoice(inv));
+    }
+
     setIsCollectDueOpen(false);
     setDueInvoiceToPay(null);
+    onClearPreselectedPatient?.();
   };
 
   // Mark Report as Delivered

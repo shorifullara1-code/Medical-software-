@@ -164,6 +164,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ] as const;
 
+  // Filter tabs for non-admin users based on Admin-assigned permissions
+  const visibleMenuItems =
+    currentUser.role === 'admin'
+      ? menuItems
+      : menuItems.filter((item) => (currentUser.allowedTabs || []).includes(item.id));
+
   return (
     <aside
       className={`no-print bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col justify-between transition-all duration-300 z-30 select-none ${
@@ -243,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Menu */}
         <nav className="p-3 space-y-1">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -285,26 +291,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 relative">
         {showUserDropdown && !collapsed && (
           <div className="absolute bottom-16 left-3 right-3 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-2 z-50 animate-fadeIn">
-            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-700/80">
-              Switch Active User
-            </div>
-            <div className="max-h-52 overflow-y-auto py-1">
-              {staffList.map((stf) => (
-                <button
-                  key={stf.id}
-                  onClick={() => {
-                    setCurrentUser(stf);
-                    setShowUserDropdown(false);
-                  }}
-                  className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between hover:bg-slate-700/60 ${
-                    currentUser.id === stf.id ? 'text-teal-400 font-bold bg-teal-500/10' : 'text-slate-300'
-                  }`}
-                >
-                  <span className="truncate">{stf.name}</span>
-                  <span className="text-[10px] font-mono text-slate-400 capitalize">{stf.role}</span>
-                </button>
-              ))}
-            </div>
+            {currentUser.role === 'admin' ? (
+              <>
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-700/80 flex items-center justify-between">
+                  <span>Switch Active User</span>
+                  <span className="text-[9px] text-teal-400 font-mono">Admin Only</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto py-1">
+                  {staffList.map((stf) => (
+                    <button
+                      key={stf.id}
+                      onClick={() => {
+                        setCurrentUser(stf);
+                        setShowUserDropdown(false);
+                      }}
+                      className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between hover:bg-slate-700/60 ${
+                        currentUser.id === stf.id ? 'text-teal-400 font-bold bg-teal-500/10' : 'text-slate-300'
+                      }`}
+                    >
+                      <span className="truncate">{stf.name}</span>
+                      <span className="text-[10px] font-mono text-slate-400 capitalize">{stf.role}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="px-3 py-2 border-b border-slate-700/80 space-y-1">
+                <p className="text-[11px] font-bold text-white truncate">{currentUser.name}</p>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="font-mono text-teal-400 font-bold">ID: {currentUser.id}</span>
+                  <span className="text-purple-300 font-semibold">
+                    {currentUser.allowedTabs?.length || 0} Sections Permitted
+                  </span>
+                </div>
+                <p className="text-[9px] text-slate-400 italic">
+                  To change user, please log out and sign in with your User ID & Password.
+                </p>
+              </div>
+            )}
             <div className="pt-1.5 border-t border-slate-700 px-2 space-y-1">
               {onLogout && (
                 <button

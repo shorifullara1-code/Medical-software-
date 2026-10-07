@@ -44,6 +44,7 @@ interface BillingCenterViewProps {
   onClearInitialDue?: () => void;
   preselectedPatientId?: string | null;
   onClearPreselectedPatient?: () => void;
+  onBatchUpdateInvoices?: (invoices: Invoice[]) => void;
 }
 
 export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
@@ -55,6 +56,7 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
   currentCollectorName,
   onSaveInvoice,
   onUpdateInvoice,
+  onBatchUpdateInvoices,
   onOpenPrint,
   onOpenScanner,
   onNavigateToPrescription,
@@ -78,7 +80,7 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
         setCollectAmount(invWithDue.dueAmount);
       }
     }
-  }, [preselectedPatientId, invoices]);
+  }, [preselectedPatientId]);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -314,13 +316,14 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
 
     let remainingToDistribute = totalCollected;
     let lastUpdatedInvoice = collectDueInvoice;
+    const updatedInvoicesList: Invoice[] = [];
 
     sortedDueInvoices.forEach((inv) => {
       if (remainingToDistribute <= 0) return;
 
       const payForThisInv = Math.min(remainingToDistribute, inv.dueAmount);
-      const newPaid = inv.paidAmount + payForThisInv;
-      const newDue = Math.max(0, inv.dueAmount - payForThisInv);
+      const newPaid = Number((inv.paidAmount + payForThisInv).toFixed(2));
+      const newDue = Number(Math.max(0, inv.dueAmount - payForThisInv).toFixed(2));
 
       const paymentRec: PaymentRecord = {
         id: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
@@ -340,14 +343,23 @@ export const BillingCenterView: React.FC<BillingCenterViewProps> = ({
         paymentHistory: [...(inv.paymentHistory || []), paymentRec],
       };
 
-      onUpdateInvoice(updatedInv);
+      updatedInvoicesList.push(updatedInv);
       remainingToDistribute -= payForThisInv;
       lastUpdatedInvoice = updatedInv;
     });
 
+    if (onBatchUpdateInvoices) {
+      onBatchUpdateInvoices(updatedInvoicesList);
+    } else {
+      updatedInvoicesList.forEach((inv) => onUpdateInvoice(inv));
+    }
+
     setCollectDueInvoice(null);
     onClearInitialDue?.();
-    onOpenPrint(lastUpdatedInvoice);
+    onClearPreselectedPatient?.();
+    if (lastUpdatedInvoice) {
+      onOpenPrint(lastUpdatedInvoice);
+    }
   };
 
   const matchingCatalogTests = testCatalog.filter((t) => {

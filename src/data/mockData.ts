@@ -59,6 +59,8 @@ export const INITIAL_STAFF: Staff[] = [
     consultationFee: 800,
     roomNo: '402 (4th Floor)',
     specialization: 'Internal Medicine Specialist',
+    password: '123456',
+    allowedTabs: ['dashboard', 'prescriptions', 'opd', 'appointments', 'patients', 'lab'],
   },
   {
     id: 'STF-02',
@@ -74,6 +76,8 @@ export const INITIAL_STAFF: Staff[] = [
     consultationFee: 1000,
     roomNo: '305 (3rd Floor)',
     specialization: 'Gynaecology & Obstetrics Specialist',
+    password: '123456',
+    allowedTabs: ['dashboard', 'prescriptions', 'opd', 'appointments', 'patients'],
   },
   {
     id: 'STF-03',
@@ -89,6 +93,8 @@ export const INITIAL_STAFF: Staff[] = [
     consultationFee: 1200,
     roomNo: '201 (2nd Floor)',
     specialization: 'Cardiologist / Heart Specialist',
+    password: '123456',
+    allowedTabs: ['dashboard', 'prescriptions', 'opd', 'appointments', 'patients'],
   },
   {
     id: 'STF-04',
@@ -99,6 +105,22 @@ export const INITIAL_STAFF: Staff[] = [
     email: 'admin@medpulse.bd',
     shift: 'Regular (9:00 AM - 5:00 PM)',
     status: 'active',
+    password: 'admin123',
+    allowedTabs: [
+      'dashboard',
+      'patients',
+      'opd',
+      'ipd',
+      'pharmacy',
+      'billing',
+      'finance',
+      'prescriptions',
+      'lab',
+      'delivery',
+      'appointments',
+      'staff',
+      'settings',
+    ],
   },
   {
     id: 'STF-05',
@@ -109,6 +131,8 @@ export const INITIAL_STAFF: Staff[] = [
     email: 'nusrat@medpulse.bd',
     shift: 'Morning (8:00 AM - 2:00 PM)',
     status: 'active',
+    password: '123456',
+    allowedTabs: ['patients', 'appointments', 'opd', 'delivery'],
   },
   {
     id: 'STF-06',
@@ -119,6 +143,8 @@ export const INITIAL_STAFF: Staff[] = [
     email: 'accounts@medpulse.bd',
     shift: 'Morning (8:00 AM - 4:00 PM)',
     status: 'active',
+    password: '123456',
+    allowedTabs: ['billing', 'delivery', 'pharmacy'],
   },
   {
     id: 'STF-07',
@@ -130,6 +156,8 @@ export const INITIAL_STAFF: Staff[] = [
     shift: '24/7 Shift',
     status: 'active',
     qualification: 'MBBS, M.Phil (Pathology), BSMMU',
+    password: '123456',
+    allowedTabs: ['lab', 'delivery', 'opd'],
   },
 ];
 

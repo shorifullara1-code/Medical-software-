@@ -25,7 +25,9 @@ import {
   LabReport,
   Appointment,
   Staff,
-  LabTestCatalogItem
+  LabTestCatalogItem,
+  IPDAdmission,
+  PharmacySale,
 } from '../types';
 import { TabType } from './Sidebar';
 
@@ -37,6 +39,8 @@ interface DashboardViewProps {
   appointments: Appointment[];
   staff: Staff[];
   testCatalog: LabTestCatalogItem[];
+  admissions?: IPDAdmission[];
+  pharmacySales?: PharmacySale[];
   setActiveTab: (tab: TabType) => void;
   onOpenScanner: () => void;
   onOpenInvoicePrint: (invoice: Invoice) => void;
@@ -53,6 +57,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   appointments,
   staff,
   testCatalog,
+  admissions = [],
+  pharmacySales = [],
   setActiveTab,
   onOpenScanner,
   onOpenInvoicePrint,
@@ -60,7 +66,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenLabReportPrint,
   onQuickCollectDue,
 }) => {
-  const totalCollection = invoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+  const totalInvoicePaid = invoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+  // Calculate standalone IPD advance payments not already covered by an advance invoice
+  const standaloneIPDAdvance = admissions.reduce((sum, adm) => {
+    if (!adm.advancePayment || adm.advancePayment <= 0) return sum;
+    const hasAdvanceInvoice = invoices.some(
+      (inv) =>
+        inv.paymentHistory?.some((p) => p.receiptNo === `REC-ADV-${adm.id}`) ||
+        (inv.patientId === adm.patientId && inv.items?.some((it) => it.name.includes('Advance Deposit') && it.name.includes(adm.bedNumber)))
+    );
+    return sum + (hasAdvanceInvoice ? 0 : adm.advancePayment);
+  }, 0);
+
+  const totalIPDAdvanceDisplay = admissions.reduce((sum, adm) => sum + (adm.advancePayment || 0), 0);
+  const totalPharmacyPaid = pharmacySales.reduce((sum, sale) => sum + (sale.paidAmount || 0), 0);
+  const totalCollection = totalInvoicePaid + standaloneIPDAdvance + totalPharmacyPaid;
+
   const totalDueAmount = invoices.reduce((sum, inv) => sum + (inv.dueAmount || 0), 0);
   const dueInvoices = invoices.filter((inv) => inv.dueAmount > 0);
   const doctorsList = staff.filter((s) => s.role === 'doctor');
@@ -82,7 +103,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <h3 className="text-2xl font-black text-slate-900 font-mono mt-2">
             BDT {totalCollection.toLocaleString()}
           </h3>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-1">Cash Collected</p>
+          <p className="text-[10px] text-slate-500 font-medium mt-1 truncate" title={`Invoices: BDT ${totalInvoicePaid.toLocaleString()} | IPD Bed Advance: BDT ${totalIPDAdvanceDisplay.toLocaleString()} | Pharmacy Cash: BDT ${totalPharmacyPaid.toLocaleString()}`}>
+            Invoices + IPD Advance ({totalIPDAdvanceDisplay > 0 ? `BDT ${totalIPDAdvanceDisplay.toLocaleString()}` : '0'}) + Pharmacy
+          </p>
         </div>
 
         {/* Total Due Amount */}

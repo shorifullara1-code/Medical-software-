@@ -534,26 +534,13 @@ export const IPDView: React.FC<IPDViewProps> = ({
       date: nowStr,
       items: invoiceItems,
       subtotal: totalInvoiceBill,
-      discount: 0,
-      total: totalInvoiceBill,
-      paidAmount: totalInvoiceBill, // 100% Settled upon discharge clearance
+      discount: advancePaid,
+      total: finalSettlementAmount,
+      paidAmount: finalSettlementAmount, // Settled upon discharge clearance (advance adjusted)
       dueAmount: 0,
       status: 'paid',
       collectedBy: currentUser.name,
       paymentHistory: [
-        ...(advancePaid > 0
-          ? [
-              {
-                id: `PAY-ADV-${Date.now()}`,
-                date: nowStr,
-                amount: advancePaid,
-                method: 'Cash' as const,
-                collectedBy: currentUser.name,
-                receiptNo: `REC-ADV-${dischargingAdmission.id}`,
-                notes: 'Advance deposit adjusted on discharge',
-              },
-            ]
-          : []),
         ...(finalSettlementAmount > 0
           ? [
               {
@@ -563,7 +550,7 @@ export const IPDView: React.FC<IPDViewProps> = ({
                 method: dischargePaymentMethod,
                 collectedBy: currentUser.name,
                 receiptNo: `REC-DIS-${dischargeId}`,
-                notes: `Discharge final dues clearance (${dischargePaymentMethod})`,
+                notes: `Discharge final dues clearance after advance deposit adjustment (${dischargePaymentMethod})`,
               },
             ]
           : []),

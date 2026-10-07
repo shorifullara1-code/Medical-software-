@@ -99,35 +99,59 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
+    if (!staffPassword.trim()) {
+      setStaffError('Please enter your password.');
+      return;
+    }
+
     const matchedStaff = staffList.find(
       (s) =>
         s.id.toLowerCase() === cleanId ||
         s.email.toLowerCase() === cleanId ||
-        s.name.toLowerCase().includes(cleanId)
+        s.name.toLowerCase() === cleanId
     );
 
-    if (matchedStaff) {
-      const session: AuthSession = {
-        isAuthenticated: true,
-        type: 'staff',
-        staffUser: matchedStaff,
-        loginTime: new Date().toISOString(),
-      };
-      onLoginSuccess(session);
-    } else {
-      setStaffError('Staff record not found. Please enter a valid Staff ID or Email.');
+    if (!matchedStaff) {
+      setStaffError(`Staff record with User ID "${staffIdOrEmail}" not found. Please enter a valid Staff User ID.`);
+      return;
     }
-  };
 
-  // Quick Staff Login Helper
-  const handleQuickStaffSelect = (s: Staff) => {
+    // Verify Password strictly against staff profile configured by Admin
+    const requiredPassword = matchedStaff.password || '123456';
+    if (staffPassword.trim() !== requiredPassword) {
+      setStaffError('ভুল পাসওয়ার্ড! এডমিন কর্তৃক নির্ধারিত পাসওয়ার্ড প্রদান করুন। (Incorrect password. Please enter the password configured by your Administrator.)');
+      return;
+    }
+
+    // Verify user has permission to at least one section
+    const allowed =
+      matchedStaff.role === 'admin'
+        ? ['dashboard']
+        : matchedStaff.allowedTabs && matchedStaff.allowedTabs.length > 0
+        ? matchedStaff.allowedTabs
+        : [];
+
+    if (allowed.length === 0) {
+      setStaffError(
+        `ইউজার আইডি "${matchedStaff.id}"-র কোনো সেকশনে এক্সেস পারমিশন দেওয়া নেই। এডমিনের সাথে যোগাযোগ করুন। (No sections permitted for this User ID. Please contact Administrator.)`
+      );
+      return;
+    }
+
     const session: AuthSession = {
       isAuthenticated: true,
       type: 'staff',
-      staffUser: s,
+      staffUser: matchedStaff,
       loginTime: new Date().toISOString(),
     };
     onLoginSuccess(session);
+  };
+
+  // Quick Staff Autofill Helper (fills credentials so user can authenticate properly)
+  const handleQuickStaffSelect = (s: Staff) => {
+    setStaffIdOrEmail(s.id);
+    setStaffPassword(s.password || '123456');
+    setStaffError(null);
   };
 
   return (
@@ -362,7 +386,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 {/* 1-Click Quick Staff Roles */}
                 <div className="pt-4 border-t border-slate-800 space-y-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    ⚡ 1-Click Login by Staff Role:
+                    ⚡ Quick Fill Staff Credentials (ইউজার আইডি ও পাসওয়ার্ড ফিল করুন):
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {staffList.map((st) => (

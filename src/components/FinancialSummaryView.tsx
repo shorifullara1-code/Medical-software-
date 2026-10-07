@@ -26,7 +26,7 @@ import {
   Receipt,
   FileText,
 } from 'lucide-react';
-import { Invoice, Patient, Staff, HospitalSettings, BillingItem } from '../types';
+import { Invoice, Patient, Staff, HospitalSettings, BillingItem, IPDAdmission, PharmacySale } from '../types';
 
 interface FinancialSummaryViewProps {
   invoices: Invoice[];
@@ -34,6 +34,8 @@ interface FinancialSummaryViewProps {
   staff: Staff[];
   currentUser: Staff;
   hospitalSettings: HospitalSettings;
+  admissions?: IPDAdmission[];
+  pharmacySales?: PharmacySale[];
   onOpenInvoicePrint: (invoice: Invoice) => void;
   onQuickCollectDue: (invoice: Invoice) => void;
   onOpenFinancialReportPrint: (filteredInvoices: Invoice[], periodLabel: string) => void;
@@ -47,6 +49,8 @@ export const FinancialSummaryView: React.FC<FinancialSummaryViewProps> = ({
   staff,
   currentUser,
   hospitalSettings,
+  admissions = [],
+  pharmacySales = [],
   onOpenInvoicePrint,
   onQuickCollectDue,
   onOpenFinancialReportPrint,
@@ -110,11 +114,24 @@ export const FinancialSummaryView: React.FC<FinancialSummaryViewProps> = ({
     const totalBilled = filteredInvoices.reduce((sum, i) => sum + (i.subtotal || 0), 0);
     const totalDiscount = filteredInvoices.reduce((sum, i) => sum + (i.discount || 0), 0);
     const totalNet = filteredInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
-    const totalPaid = filteredInvoices.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+
+    const invoicePaid = filteredInvoices.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+    const standaloneIPDAdvance = admissions.reduce((sum, adm) => {
+      if (!adm.advancePayment || adm.advancePayment <= 0) return sum;
+      const hasInvoice = filteredInvoices.some(
+        (inv) =>
+          inv.paymentHistory?.some((p) => p.receiptNo === `REC-ADV-${adm.id}`) ||
+          (inv.patientId === adm.patientId && inv.items?.some((it) => it.name.includes('Advance Deposit') && it.name.includes(adm.bedNumber)))
+      );
+      return sum + (hasInvoice ? 0 : adm.advancePayment);
+    }, 0);
+    const pharmacyPaidTotal = pharmacySales.reduce((sum, s) => sum + (s.paidAmount || 0), 0);
+
+    const totalPaid = invoicePaid + standaloneIPDAdvance + pharmacyPaidTotal;
     const totalDue = filteredInvoices.reduce((sum, i) => sum + (i.dueAmount || 0), 0);
 
     const todayInvoices = invoices.filter((i) => isToday(i.date));
-    const todayRevenue = todayInvoices.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+    const todayRevenue = todayInvoices.reduce((sum, i) => sum + (i.paidAmount || 0), 0) + standaloneIPDAdvance + pharmacyPaidTotal;
     const todayDue = todayInvoices.reduce((sum, i) => sum + (i.dueAmount || 0), 0);
 
     const weekInvoices = invoices.filter((i) => isThisWeek(i.date));

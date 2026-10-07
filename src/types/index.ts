@@ -15,6 +15,8 @@ export interface Staff {
   roomNo?: string;
   specialization?: string;
   avatar?: string;
+  password?: string;
+  allowedTabs?: string[];
 }
 
 export interface Patient {

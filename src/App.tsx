@@ -81,7 +81,7 @@ import { FinancialReportPrintModal } from './components/PrintModals/FinancialRep
 import { DischargeSummaryPrintModal } from './components/PrintModals/DischargeSummaryPrintModal';
 import { AdmissionSlipPrintModal } from './components/PrintModals/AdmissionSlipPrintModal';
 import { PharmacyInvoicePrintModal } from './components/PrintModals/PharmacyInvoicePrintModal';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export default function App() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(() => loadAuthSession());
@@ -185,12 +185,35 @@ export default function App() {
     };
   }, []);
 
+  // RBAC Access Enforcement: Check whether current user is allowed to access tab
+  const isTabAllowed = (tab: TabType): boolean => {
+    if (currentUser.role === 'admin') return true;
+    const allowed =
+      currentUser.allowedTabs && currentUser.allowedTabs.length > 0 ? currentUser.allowedTabs : [];
+    return allowed.includes(tab);
+  };
+
+  useEffect(() => {
+    if (currentUser.role !== 'admin') {
+      const allowed =
+        currentUser.allowedTabs && currentUser.allowedTabs.length > 0 ? currentUser.allowedTabs : [];
+      if (!allowed.includes(activeTab)) {
+        if (allowed.length > 0) {
+          setActiveTab(allowed[0] as TabType);
+        }
+      }
+    }
+  }, [currentUser, activeTab]);
+
   const handleLoginSuccess = (session: AuthSession) => {
     setAuthSession(session);
     saveAuthSession(session);
     if (session.type === 'staff' && session.staffUser) {
       setCurrentUser(session.staffUser);
       saveActiveUser(session.staffUser);
+      if (session.staffUser.role !== 'admin' && session.staffUser.allowedTabs && session.staffUser.allowedTabs.length > 0) {
+        setActiveTab(session.staffUser.allowedTabs[0] as TabType);
+      }
       showToast(`Welcome, ${session.staffUser.name}!`);
     } else if (session.type === 'patient' && session.patientUser) {
       showToast(`Welcome, ${session.patientUser.name}!`);
@@ -220,11 +243,26 @@ export default function App() {
   };
 
   const handleUpdateInvoice = (updatedInvoice: Invoice) => {
-    const updated = invoices.map((inv) => (inv.id === updatedInvoice.id ? updatedInvoice : inv));
-    setInvoices(updated);
-    saveInvoices(updated);
+    setInvoices((prev) => {
+      const updated = prev.map((inv) => (inv.id === updatedInvoice.id ? updatedInvoice : inv));
+      saveInvoices(updated);
+      return updated;
+    });
     syncToCloud();
     showToast(`Invoice updated successfully`);
+  };
+
+  const handleBatchUpdateInvoices = (updatedInvs: Invoice[]) => {
+    setInvoices((prev) => {
+      const updateMap = new Map(updatedInvs.map((i) => [i.id, i]));
+      const next = prev.map((inv) => updateMap.get(inv.id) || inv);
+      saveInvoices(next);
+      return next;
+    });
+    setTargetDueInvoice(null);
+    setTargetPatientId(null);
+    syncToCloud();
+    showToast(`Payment collected successfully! Bill updated.`);
   };
 
   const handleSavePrescription = (newRx: Prescription) => {
@@ -311,6 +349,21 @@ export default function App() {
     action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd' | 'pharmacy',
     patientId: string
   ) => {
+    const actionToTabMap: Record<string, TabType> = {
+      prescribe: 'prescriptions',
+      bill: 'billing',
+      collect_due: 'billing',
+      lab: 'lab',
+      appointment: 'appointments',
+      delivery: 'delivery',
+      ipd: 'ipd',
+      pharmacy: 'pharmacy',
+    };
+    const targetTab = actionToTabMap[action];
+    if (targetTab && !isTabAllowed(targetTab)) {
+      showToast(`প্রবেশাধিকার সীমাবদ্ধ: আপনার User ID (${currentUser.id})-র '${targetTab}' সেকশনে এক্সেস নেই।`);
+      return;
+    }
     setTargetPatientId(patientId);
     if (action === 'prescribe') setActiveTab('prescriptions');
     else if (action === 'bill') setActiveTab('billing');
@@ -376,6 +429,54 @@ export default function App() {
     saveIPDAdmissions(updatedAdmissions);
     setBeds(updatedBeds);
     saveBeds(updatedBeds);
+
+    // Auto-create official IPD Advance Deposit Invoice in invoices so it counts in billing & total collections
+    if (newAdmission.advancePayment && newAdmission.advancePayment > 0) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const advanceInvoice: Invoice = {
+        id: `INV-ADV-${Date.now().toString().slice(-6)}`,
+        patientId: newAdmission.patientId,
+        patientName: newAdmission.patientName,
+        patientPhone: newAdmission.patientPhone,
+        date: todayStr,
+        items: [
+          {
+            id: `ITEM-ADV-${Date.now()}`,
+            name: `IPD Bed Admission Advance Deposit - Bed ${newAdmission.bedNumber} (${newAdmission.wardType})`,
+            category: 'bed',
+            price: newAdmission.advancePayment,
+            quantity: 1,
+            total: newAdmission.advancePayment,
+            roomNo: newAdmission.bedNumber,
+            roomLocation: `${newAdmission.wardType} - ${newAdmission.bedNumber}`,
+          },
+        ],
+        subtotal: newAdmission.advancePayment,
+        discount: 0,
+        total: newAdmission.advancePayment,
+        paidAmount: newAdmission.advancePayment,
+        dueAmount: 0,
+        status: 'paid',
+        collectedBy: currentUser?.name || 'Admission Desk',
+        paymentHistory: [
+          {
+            id: `PAY-ADV-${Date.now()}`,
+            date: new Date().toLocaleString(),
+            amount: newAdmission.advancePayment,
+            method: 'Cash',
+            collectedBy: currentUser?.name || 'Admission Desk',
+            receiptNo: `REC-ADV-${newAdmission.id}`,
+            notes: `IPD Bed Admission Advance Deposit for ${newAdmission.bedNumber}`,
+          },
+        ],
+      };
+      setInvoices((prev) => {
+        const next = [advanceInvoice, ...prev];
+        saveInvoices(next);
+        return next;
+      });
+    }
+
     syncToCloud();
     setPrintAdmissionSlip(newAdmission);
     showToast(`IPD Admission #${newAdmission.admissionNumber || newAdmission.id} created for Bed ${newAdmission.bedNumber}`);
@@ -617,6 +718,33 @@ export default function App() {
         {/* Scrollable Page Body */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/60">
           <div className="max-w-6xl mx-auto">
+            {!isTabAllowed(activeTab) ? (
+              <div className="bg-white rounded-2xl border border-rose-200 p-8 shadow-sm text-center max-w-lg mx-auto my-12 space-y-4 animate-fadeIn">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200 shadow-inner">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">
+                    ⛔ প্রবেশাধিকার সীমাবদ্ধ (Access Restricted)
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    আপনার User ID (<span className="font-mono font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">{currentUser.id}</span>)-কে এই সেকশনটিতে প্রবেশের অনুমতি দেওয়া হয়নি। শুধুমাত্র এডমিন কর্তৃক নির্ধারিত সেকশনে আপনি প্রবেশ করতে পারবেন।
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      const firstAllowed = (currentUser.allowedTabs?.[0] as TabType) || 'dashboard';
+                      setActiveTab(firstAllowed);
+                    }}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-md"
+                  >
+                    অনুমোদিত সেকশনে প্রবেশ করুন
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
             {activeTab === 'dashboard' && (
               <DashboardView
                 patients={patients}
@@ -626,6 +754,8 @@ export default function App() {
                 appointments={appointments}
                 staff={staff}
                 testCatalog={testCatalog}
+                admissions={ipdAdmissions}
+                pharmacySales={pharmacySales}
                 setActiveTab={setActiveTab}
                 onOpenScanner={() => setIsScannerOpen(true)}
                 onOpenInvoicePrint={(inv) => setPrintInvoice(inv)}
@@ -727,9 +857,11 @@ export default function App() {
                 patients={patients}
                 staff={staff}
                 testCatalog={testCatalog}
+                admissions={ipdAdmissions}
                 currentCollectorName={currentUser.name}
                 onSaveInvoice={handleSaveInvoice}
                 onUpdateInvoice={handleUpdateInvoice}
+                onBatchUpdateInvoices={handleBatchUpdateInvoices}
                 onOpenPrint={(inv) => setPrintInvoice(inv)}
                 onOpenScanner={() => setIsScannerOpen(true)}
                 onNavigateToPrescription={(pid) => {
@@ -750,6 +882,8 @@ export default function App() {
                 staff={staff}
                 currentUser={currentUser}
                 hospitalSettings={hospitalSettings}
+                admissions={ipdAdmissions}
+                pharmacySales={pharmacySales}
                 onOpenInvoicePrint={(inv) => setPrintInvoice(inv)}
                 onQuickCollectDue={handleQuickCollectDueFromDashboard}
                 onOpenFinancialReportPrint={(filteredInvs, pLabel) =>
@@ -800,6 +934,7 @@ export default function App() {
                 staff={staff}
                 currentUser={currentUser}
                 onUpdateInvoice={handleUpdateInvoice}
+                onBatchUpdateInvoices={handleBatchUpdateInvoices}
                 onUpdateLabReport={handleUpdateLabReport}
                 onOpenPrintReport={(report) => setPrintLabReport(report)}
                 onOpenScanner={() => setIsScannerOpen(true)}
@@ -829,6 +964,7 @@ export default function App() {
             {activeTab === 'staff' && (
               <StaffManagementView
                 staffList={staff}
+                currentUser={currentUser}
                 onAddStaff={handleAddStaff}
                 onUpdateStaff={handleUpdateStaff}
               />
@@ -845,6 +981,8 @@ export default function App() {
                 }}
                 admissions={ipdAdmissions}
               />
+            )}
+              </>
             )}
           </div>
         </main>

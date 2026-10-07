@@ -67,7 +67,20 @@ function safeSet<T>(key: string, data: T): void {
   }
 }
 
-export const loadStaff = (): Staff[] => safeGet(STORAGE_KEYS.STAFF, INITIAL_STAFF);
+export const loadStaff = (): Staff[] => {
+  const loaded = safeGet<Staff[]>(STORAGE_KEYS.STAFF, INITIAL_STAFF);
+  return loaded.map((s) => {
+    const initMatch = INITIAL_STAFF.find((init) => init.id === s.id);
+    return {
+      ...s,
+      password: s.password || initMatch?.password || '123456',
+      allowedTabs:
+        s.allowedTabs && s.allowedTabs.length > 0
+          ? s.allowedTabs
+          : initMatch?.allowedTabs || (s.role === 'admin' ? ['dashboard', 'patients', 'opd', 'ipd', 'pharmacy', 'billing', 'finance', 'prescriptions', 'lab', 'delivery', 'appointments', 'staff', 'settings'] : ['dashboard']),
+    };
+  });
+};
 export const saveStaff = (staff: Staff[]) => safeSet(STORAGE_KEYS.STAFF, staff);
 
 export const loadPatients = (): Patient[] => safeGet(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
