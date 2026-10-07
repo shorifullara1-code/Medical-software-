@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   loadStaff,
   saveStaff,
@@ -31,6 +31,11 @@ import {
   loadPharmacySales,
   savePharmacySales,
 } from './utils/storage';
+import {
+  pullAllFromSupabase,
+  pushAllToSupabase,
+  subscribeToSupabaseRealtime,
+} from './utils/supabaseSync';
 import {
   Staff,
   Patient,
@@ -66,6 +71,7 @@ import { IPDView } from './components/IPDView';
 import { PharmacyView } from './components/PharmacyView';
 import { PatientHistoryModal } from './components/PatientHistoryModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
+import { SupabaseModal } from './components/SupabaseModal';
 import { PrescriptionPrintModal } from './components/PrintModals/PrescriptionPrintModal';
 import { InvoicePrintModal } from './components/PrintModals/InvoicePrintModal';
 import { LabReportPrintModal } from './components/PrintModals/LabReportPrintModal';
@@ -95,6 +101,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [patientHistoryModalId, setPatientHistoryModalId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -124,6 +131,59 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Cloud Auto Sync Helper
+  const syncToCloud = () => {
+    pushAllToSupabase().catch((err) => console.error('Cloud auto-sync error:', err));
+  };
+
+  // Helper to load cloud data into state
+  const applyCloudDataToState = (cloudData: any) => {
+    if (!cloudData) return;
+    if (Array.isArray(cloudData.patients)) setPatients(cloudData.patients);
+    if (Array.isArray(cloudData.invoices)) setInvoices(cloudData.invoices);
+    if (Array.isArray(cloudData.prescriptions)) setPrescriptions(cloudData.prescriptions);
+    if (Array.isArray(cloudData.labReports)) setLabReports(cloudData.labReports);
+    if (Array.isArray(cloudData.appointments)) setAppointments(cloudData.appointments);
+    if (Array.isArray(cloudData.staff)) setStaff(cloudData.staff);
+    if (Array.isArray(cloudData.beds)) setBeds(cloudData.beds);
+    if (Array.isArray(cloudData.ipdAdmissions)) setIpdAdmissions(cloudData.ipdAdmissions);
+    if (Array.isArray(cloudData.pharmacyMedicines)) setPharmacyMedicines(cloudData.pharmacyMedicines);
+    if (Array.isArray(cloudData.pharmacySales)) setPharmacySales(cloudData.pharmacySales);
+    if (cloudData.hospitalSettings) setHospitalSettings(cloudData.hospitalSettings);
+  };
+
+  // Multi-Device Cloud Realtime Sync & Polling Effect
+  useEffect(() => {
+    // 1. Fetch latest state on app load
+    pullAllFromSupabase().then((res) => {
+      if (res.success && res.data) {
+        applyCloudDataToState(res.data);
+      } else {
+        // If no cloud data yet, perform initial push
+        pushAllToSupabase();
+      }
+    });
+
+    // 2. Realtime WebSocket listener for instant multi-phone updates
+    const unsubscribe = subscribeToSupabaseRealtime((newCloudData) => {
+      applyCloudDataToState(newCloudData);
+    });
+
+    // 3. Fallback interval polling every 5 seconds to ensure non-stop sync
+    const syncInterval = setInterval(() => {
+      pullAllFromSupabase().then((res) => {
+        if (res.success && res.data) {
+          applyCloudDataToState(res.data);
+        }
+      });
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(syncInterval);
+    };
+  }, []);
+
   const handleLoginSuccess = (session: AuthSession) => {
     setAuthSession(session);
     saveAuthSession(session);
@@ -146,6 +206,7 @@ export default function App() {
     const updated = [newPatient, ...patients];
     setPatients(updated);
     savePatients(updated);
+    syncToCloud();
     showToast(`Patient '${newPatient.name}' registered successfully`);
   };
 
@@ -153,6 +214,7 @@ export default function App() {
     const updated = [newInvoice, ...invoices];
     setInvoices(updated);
     saveInvoices(updated);
+    syncToCloud();
     showToast(`Invoice '${newInvoice.id}' generated`);
   };
 
@@ -160,6 +222,7 @@ export default function App() {
     const updated = invoices.map((inv) => (inv.id === updatedInvoice.id ? updatedInvoice : inv));
     setInvoices(updated);
     saveInvoices(updated);
+    syncToCloud();
     showToast(`Invoice updated successfully`);
   };
 
@@ -167,6 +230,7 @@ export default function App() {
     const updated = [newRx, ...prescriptions];
     setPrescriptions(updated);
     savePrescriptions(updated);
+    syncToCloud();
     showToast(`Prescription '${newRx.id}' saved`);
   };
 
@@ -174,6 +238,7 @@ export default function App() {
     const updated = [newReport, ...labReports];
     setLabReports(updated);
     saveLabReports(updated);
+    syncToCloud();
     showToast(`Lab report '${newReport.id}' created`);
   };
 
@@ -181,18 +246,21 @@ export default function App() {
     const updated = labReports.map((r) => (r.id === updatedReport.id ? updatedReport : r));
     setLabReports(updated);
     saveLabReports(updated);
+    syncToCloud();
     showToast(`Lab report '${updatedReport.id}' updated`);
   };
 
   const handleUpdateTestCatalog = (newCatalog: LabTestCatalogItem[]) => {
     setTestCatalog(newCatalog);
     saveTestCatalog(newCatalog);
+    syncToCloud();
     showToast(`Test catalog updated`);
   };
 
   const handleUpdateHospitalSettings = (newSettings: HospitalSettings) => {
     setHospitalSettings(newSettings);
     saveHospitalSettings(newSettings);
+    syncToCloud();
     showToast(`Hospital settings saved`);
   };
 
@@ -200,6 +268,7 @@ export default function App() {
     const updated = [...staff, newStaff];
     setStaff(updated);
     saveStaff(updated);
+    syncToCloud();
     showToast(`New staff member added`);
   };
 
@@ -207,6 +276,7 @@ export default function App() {
     const updated = staff.map((s) => (s.id === updatedStaff.id ? updatedStaff : s));
     setStaff(updated);
     saveStaff(updated);
+    syncToCloud();
     if (currentUser.id === updatedStaff.id) {
       setCurrentUser(updatedStaff);
       saveActiveUser(updatedStaff);
@@ -218,6 +288,7 @@ export default function App() {
     const updated = [newApt, ...appointments];
     setAppointments(updated);
     saveAppointments(updated);
+    syncToCloud();
     showToast(`Appointment #${newApt.serialNumber} booked successfully`);
   };
 
@@ -225,6 +296,7 @@ export default function App() {
     const updated = appointments.map((a) => (a.id === id ? { ...a, status } : a));
     setAppointments(updated);
     saveAppointments(updated);
+    syncToCloud();
     showToast(`Status updated`);
   };
 
@@ -257,6 +329,7 @@ export default function App() {
     savePharmacySales(updatedSales);
     setPharmacyMedicines(updatedMeds);
     savePharmacyMedicines(updatedMeds);
+    syncToCloud();
     setPrintPharmacySale(newSale);
     showToast(
       newSale.saleType === 'indoor' && newSale.dueAmount > 0
@@ -268,6 +341,7 @@ export default function App() {
   const handleUpdatePharmacyMedicines = (updatedMeds: PharmacyMedicine[]) => {
     setPharmacyMedicines(updatedMeds);
     savePharmacyMedicines(updatedMeds);
+    syncToCloud();
     showToast('Medicine stock inventory updated successfully');
   };
 
@@ -286,6 +360,7 @@ export default function App() {
     });
     setPharmacySales(updatedSales);
     savePharmacySales(updatedSales);
+    syncToCloud();
   };
 
   const handleQuickCollectDueFromDashboard = (inv: Invoice) => {
@@ -299,6 +374,7 @@ export default function App() {
     saveIPDAdmissions(updatedAdmissions);
     setBeds(updatedBeds);
     saveBeds(updatedBeds);
+    syncToCloud();
     setPrintAdmissionSlip(newAdmission);
     showToast(`IPD Admission #${newAdmission.admissionNumber || newAdmission.id} created for Bed ${newAdmission.bedNumber}`);
   };
@@ -332,6 +408,7 @@ export default function App() {
       saveInvoices(updatedInvs);
     }
 
+    syncToCloud();
     setPrintDischargeSummary(dischargeSummary);
     showToast(`Patient discharged successfully. Discharge summary certificate generated!`);
   };
@@ -348,6 +425,7 @@ export default function App() {
     });
     setIpdAdmissions(updated);
     saveIPDAdmissions(updated);
+    syncToCloud();
     showToast('Patient vitals recorded successfully');
   };
 
@@ -363,6 +441,7 @@ export default function App() {
     });
     setIpdAdmissions(updated);
     saveIPDAdmissions(updated);
+    syncToCloud();
     showToast('Doctor clinical note added');
   };
 
@@ -527,6 +606,7 @@ export default function App() {
           currentUser={currentUser}
           onOpenScanner={() => setIsScannerOpen(true)}
           onOpenPatientHistory={() => setPatientHistoryModalId(targetPatientId || patients[0]?.id || '')}
+          onOpenSupabaseModal={() => setIsSupabaseModalOpen(true)}
           onToggleSidebarMobile={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           onLogout={handleLogout}
           totalDueAmount={totalDueAmount}
@@ -870,6 +950,18 @@ export default function App() {
           hospitalSettings={hospitalSettings}
         />
       )}
+
+      <SupabaseModal
+        isOpen={isSupabaseModalOpen}
+        onClose={() => setIsSupabaseModalOpen(false)}
+        onDataRestored={() => {
+          pullAllFromSupabase().then((res) => {
+            if (res.success && res.data) {
+              applyCloudDataToState(res.data);
+            }
+          });
+        }}
+      />
     </div>
   );
 }
