@@ -285,7 +285,7 @@ export const DischargeSummaryPrintModal: React.FC<DischargeSummaryPrintModalProp
 
               <div className="mt-4 pt-2 border-t border-slate-200 text-center text-[9px] text-slate-500 flex items-center justify-between">
                 <span>{hospitalSettings.govtRegNo || 'DGHS Reg No: 2026/DH-4821'}</span>
-                <span>Generated on: {summary.generatedAt}</span>
+                <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
                 <span>Page 1/1 (A4 Official Medical Certificate)</span>
               </div>
             </div>

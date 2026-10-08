@@ -307,9 +307,10 @@ export const AppointmentPrintModal: React.FC<AppointmentPrintModalProps> = ({
               </div>
             </div>
 
-            <p className="text-center text-[9px] text-slate-400 mt-4">
-              * This is a computer generated OPD appointment confirmation letter. Barcodes on top correspond to Patient ID & Appointment Token.
-            </p>
+            <div className="mt-4 pt-1.5 border-t border-slate-200 flex items-center justify-between text-[9px] text-slate-500 font-medium">
+              <span>* This is a computer generated OPD appointment confirmation letter.</span>
+              <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
+            </div>
           </div>
         </div>
       </div>

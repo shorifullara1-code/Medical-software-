@@ -291,9 +291,9 @@ export const AdmissionSlipPrintModal: React.FC<AdmissionSlipPrintModalProps> = (
               </div>
 
               {/* Document Audit Footer */}
-              <div className="mt-4 pt-2 border-t border-slate-200 text-center text-[8px] text-slate-400 flex items-center justify-between">
+              <div className="mt-4 pt-2 border-t border-slate-200 text-center text-[9px] text-slate-500 flex items-center justify-between">
                 <span>System Reference: {admission.id} • Generated via Hospital IPD ERP</span>
-                <span>{hospitalSettings.footerNotice || 'For emergency ambulance or critical queries, call hospital hotline.'}</span>
+                <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
                 <span>Page 1 of 1 (Official IPD Record)</span>
               </div>
             </div>

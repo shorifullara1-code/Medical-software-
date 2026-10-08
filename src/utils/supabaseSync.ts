@@ -184,6 +184,33 @@ export async function pushAllToSupabase(overridePayload?: FullHospitalDataPayloa
       }
     }
 
+    // Push to relational 'staff' table if exists (keeps credentials & roles synced with PostgreSQL)
+    if (payload.staff && payload.staff.length > 0) {
+      const staffRows = payload.staff.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        role: s.role,
+        department: s.department,
+        phone: s.phone,
+        email: s.email,
+        shift: s.shift,
+        status: s.status || 'active',
+        qualification: s.qualification || null,
+        bmdc_reg: s.bmdcReg || null,
+        consultation_fee: s.consultationFee || 0,
+        room_no: s.roomNo || null,
+        specialization: s.specialization || null,
+        password: s.password || '123456',
+        allowed_tabs: s.allowedTabs || ['dashboard'],
+      }));
+
+      try {
+        await supabase.from('staff').upsert(staffRows, { onConflict: 'id' });
+      } catch (err) {
+        // Ignored if table has slightly different columns or uncreated
+      }
+    }
+
     localStorage.setItem('supabase_last_push_str', new Date().toLocaleString());
     return {
       success: pushSuccess,

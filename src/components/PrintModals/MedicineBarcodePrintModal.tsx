@@ -193,6 +193,12 @@ export const MedicineBarcodePrintModal: React.FC<MedicineBarcodePrintModalProps>
               </div>
             ))}
           </div>
+
+          {/* Printable Page Footer */}
+          <div className="mt-4 pt-2 border-t border-slate-300 flex items-center justify-between text-[9px] text-slate-500 font-medium">
+            <span>Hospital Pharmacy Dispensary • Scannable Barcode Labels</span>
+            <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
+          </div>
         </div>
 
         {/* Footer Actions */}

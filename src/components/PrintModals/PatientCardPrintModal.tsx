@@ -108,7 +108,7 @@ export const PatientCardPrintModal: React.FC<PatientCardPrintModalProps> = ({
             {/* Footer hotline */}
             <div className="w-full mt-3 pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[9px] text-slate-500">
               <span>Emergency: {hospitalSettings.hotline || hospitalSettings.phone}</span>
-              <span>{hospitalSettings.govtRegNo || 'Dhaka, Bangladesh'}</span>
+              <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
             </div>
           </div>
         </div>

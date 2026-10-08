@@ -237,6 +237,7 @@ export interface HospitalSettings {
   labDept: string;
   appointmentDept: string;
   footerNotice?: string;
+  softwareCredits?: string;
   customLogoUrl?: string;
   bedRates?: Record<WardType, number>;
   autoChargeBedRentHours?: number; // default 24

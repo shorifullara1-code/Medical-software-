@@ -283,10 +283,10 @@ ALTER TABLE public.beds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public access beds" ON public.beds FOR ALL USING (true) WITH CHECK (true);
 
 -- ------------------------------------------------------------
--- 11. STAFF & DOCTORS ROSTER TABLE
+-- 11. STAFF & DOCTORS ROSTER TABLE (RBAC & Credentials)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.staff (
-    id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY, -- e.g. STF-01, STF-04, dr_rahim
     name VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL,
     department VARCHAR(100),
@@ -300,11 +300,38 @@ CREATE TABLE IF NOT EXISTS public.staff (
     room_no VARCHAR(50),
     specialization VARCHAR(255),
     avatar TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    password VARCHAR(255) DEFAULT '123456',
+    allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Idempotent migrations for existing installations:
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456';
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb;
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS idx_staff_phone ON public.staff(phone);
+CREATE INDEX IF NOT EXISTS idx_staff_email ON public.staff(email);
+CREATE INDEX IF NOT EXISTS idx_staff_role ON public.staff(role);
+
 ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public access staff" ON public.staff;
 CREATE POLICY "Allow public access staff" ON public.staff FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed / Upsert Default Hospital Staff Credentials
+INSERT INTO public.staff (id, name, role, department, phone, email, shift, password, allowed_tabs)
+VALUES 
+  ('STF-04', 'Hospital Administrator', 'admin', 'Hospital Management & Operations', '01811-000000', 'admin@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', 'admin123', '["dashboard","patients","opd","ipd","pharmacy","billing","finance","prescriptions","lab","delivery","appointments","staff","settings"]'::jsonb),
+  ('STF-01', 'Dr. Rafiqul Islam', 'doctor', 'Internal Medicine Department', '01711-234567', 'dr.rafiq@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', '123456', '["dashboard","opd","prescriptions","patients","lab","appointments"]'::jsonb),
+  ('STF-02', 'Dr. Nusrat Jahan', 'doctor', 'Gynaecology & Obstetrics Department', '01819-876543', 'dr.nusrat@medpulse.bd', 'Evening (2:00 PM - 8:00 PM)', '123456', '["dashboard","opd","prescriptions","patients","lab","appointments"]'::jsonb),
+  ('STF-05', 'Farzana Akter', 'receptionist', 'Patient Registration & Front Desk', '01912-345678', 'farzana@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', '123456', '["dashboard","patients","appointments","opd","ipd"]'::jsonb),
+  ('STF-06', 'Md. Kamal Hossain', 'accountant', 'Billing & Finance Department', '01611-987654', 'kamal@medpulse.bd', 'Regular (9:00 AM - 5:00 PM)', '123456', '["dashboard","billing","finance","pharmacy","delivery"]'::jsonb),
+  ('STF-07', 'Shahana Parvin', 'lab_technician', 'Pathology & Diagnostic Laboratory', '01511-234567', 'shahana@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', '123456', '["dashboard","lab","delivery","opd"]'::jsonb)
+ON CONFLICT (id) DO UPDATE SET
+  password = EXCLUDED.password,
+  allowed_tabs = EXCLUDED.allowed_tabs,
+  updated_at = NOW();
 
 -- ------------------------------------------------------------
 -- 12. HOSPITAL SETTINGS TABLE

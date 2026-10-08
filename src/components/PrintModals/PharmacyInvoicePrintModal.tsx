@@ -265,8 +265,9 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
                 </div>
               </div>
 
-              <div className="text-center text-[10px] text-slate-400 pt-2 border-t border-slate-100">
-                {hospitalSettings.footerNotice || 'MedPulse Specialized Hospital Pharmacy • 24/7 Quality Healthcare & Genuine Medicines'}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                <span>{hospitalSettings.footerNotice || 'Hospital Pharmacy • 24/7 Quality Healthcare & Genuine Medicines'}</span>
+                <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
               </div>
             </div>
           </div>

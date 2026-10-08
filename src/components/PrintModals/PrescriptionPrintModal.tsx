@@ -413,6 +413,12 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
                 <p className="text-[10px] text-slate-500">{prescription.doctorSpecialty}</p>
               </div>
             </div>
+
+            {/* Document Footer Branding */}
+            <div className="mt-3 pt-1.5 border-t border-slate-200 flex items-center justify-between text-[9px] text-slate-500 font-medium">
+              <span>{hospitalSettings?.footerNotice || 'Thank you for choosing our specialized medical healthcare services.'}</span>
+              <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Database, Cloud, RefreshCw, CheckCircle2, AlertTriangle, ArrowUpRight, ArrowDownLeft, ShieldCheck, ExternalLink, HardDrive } from 'lucide-react';
+import { X, Database, Cloud, RefreshCw, CheckCircle2, AlertTriangle, ArrowUpRight, ArrowDownLeft, ShieldCheck, ExternalLink, HardDrive, Code, Copy, Check } from 'lucide-react';
 import { SUPABASE_URL, SUPABASE_PROJECT_ID, SUPABASE_PROJECT_NAME, testSupabaseConnection } from '../lib/supabase';
 import { pushAllToSupabase, pullAllFromSupabase } from '../utils/supabaseSync';
 
@@ -17,6 +17,8 @@ export const SupabaseModal: React.FC<SupabaseModalProps> = ({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [connectionState, setConnectionState] = useState<'connected' | 'idle' | 'error'>('connected');
+  const [showSqlScript, setShowSqlScript] = useState<boolean>(false);
+  const [copiedSql, setCopiedSql] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -202,6 +204,106 @@ export const SupabaseModal: React.FC<SupabaseModalProps> = ({
                 </div>
               </button>
             </div>
+          </div>
+
+          {/* Support SQL Script Section */}
+          <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Code className="w-4 h-4 text-indigo-700" />
+                <span className="font-bold text-xs text-indigo-950">Database SQL Code for Support & Supabase Editor</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSqlScript(!showSqlScript)}
+                className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 cursor-pointer shadow-2xs"
+              >
+                {showSqlScript ? 'Hide SQL Code' : 'View / Copy SQL Code'}
+              </button>
+            </div>
+
+            {showSqlScript && (
+              <div className="space-y-2 animate-fadeIn pt-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-indigo-900">
+                    Run in Supabase <strong>SQL Editor</strong> or provide to technical support:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `-- MediFlow Hospital ERP - Staff & Roles Database SQL Script
+CREATE TABLE IF NOT EXISTS public.staff (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    department VARCHAR(100),
+    phone VARCHAR(50),
+    email VARCHAR(100),
+    shift VARCHAR(50),
+    status VARCHAR(30) DEFAULT 'active',
+    qualification TEXT,
+    bmdc_reg VARCHAR(100),
+    consultation_fee NUMERIC(12,2) DEFAULT 0,
+    room_no VARCHAR(50),
+    specialization VARCHAR(255),
+    avatar TEXT,
+    password VARCHAR(255) DEFAULT '123456',
+    allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456';
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb;
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access staff" ON public.staff;
+CREATE POLICY "Allow all access staff" ON public.staff FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.staff (id, name, role, department, phone, email, shift, password, allowed_tabs)
+VALUES 
+  ('STF-04', 'Hospital Administrator', 'admin', 'Hospital Management & Operations', '01811-000000', 'admin@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', 'admin123', '["dashboard","patients","opd","ipd","pharmacy","billing","finance","prescriptions","lab","delivery","appointments","staff","settings"]'::jsonb),
+  ('STF-01', 'Dr. Rafiqul Islam', 'doctor', 'Internal Medicine Department', '01711-234567', 'dr.rafiq@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', '123456', '["dashboard","opd","prescriptions","patients","lab","appointments"]'::jsonb),
+  ('STF-05', 'Farzana Akter', 'receptionist', 'Patient Registration & Front Desk', '01912-345678', 'farzana@medpulse.bd', 'Morning (8:00 AM - 2:00 PM)', '123456', '["dashboard","patients","appointments","opd","ipd"]'::jsonb)
+ON CONFLICT (id) DO UPDATE SET password = EXCLUDED.password, allowed_tabs = EXCLUDED.allowed_tabs, updated_at = NOW();`;
+                      navigator.clipboard.writeText(text);
+                      setCopiedSql(true);
+                      setTimeout(() => setCopiedSql(false), 3000);
+                    }}
+                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedSql ? (
+                      <>
+                        <Check className="w-3 h-3" />
+                        <span>কপি হয়েছে ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy SQL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <pre className="p-3 bg-slate-950 text-emerald-400 rounded-xl font-mono text-[10px] overflow-x-auto max-h-48 border border-slate-800">
+{`CREATE TABLE IF NOT EXISTS public.staff (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    phone VARCHAR(50),
+    email VARCHAR(100),
+    password VARCHAR(255) DEFAULT '123456',
+    allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456';
+ALTER TABLE IF EXISTS public.staff ADD COLUMN IF NOT EXISTS allowed_tabs JSONB DEFAULT '["dashboard"]'::jsonb;
+ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access staff" ON public.staff FOR ALL USING (true) WITH CHECK (true);`}
+                </pre>
+              </div>
+            )}
           </div>
 
           {/* Security & Reliability Box */}

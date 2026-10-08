@@ -93,41 +93,64 @@ export const LoginView: React.FC<LoginViewProps> = ({
     e.preventDefault();
     setStaffError(null);
 
-    const cleanId = staffIdOrEmail.trim().toLowerCase();
-    if (!cleanId) {
-      setStaffError('Please enter Staff ID or Email.');
+    const cleanInput = staffIdOrEmail.trim();
+    const cleanId = cleanInput.toLowerCase();
+    const cleanDigits = cleanInput.replace(/\D/g, ''); // all digits e.g. 01711234567
+
+    if (!cleanInput) {
+      setStaffError('দয়া করে স্টাফ আইডি, মোবাইল নাম্বার বা ইমেইল প্রবেশ করান। (Please enter Staff ID, Mobile Number or Email.)');
       return;
     }
 
     if (!staffPassword.trim()) {
-      setStaffError('Please enter your password.');
+      setStaffError('দয়া করে আপনার পাসওয়ার্ড প্রদান করুন। (Please enter your password.)');
       return;
     }
 
-    const matchedStaff = staffList.find(
-      (s) =>
-        s.id.toLowerCase() === cleanId ||
-        s.email.toLowerCase() === cleanId ||
-        s.name.toLowerCase() === cleanId ||
-        (cleanId === 'admin' && s.role === 'admin')
-    );
+    const matchedStaff = staffList.find((s) => {
+      // 1. Direct ID match (e.g. STF-01, STF-08, user123)
+      if (s.id && s.id.toLowerCase().trim() === cleanId) return true;
+      // 2. Email match
+      if (s.email && s.email.toLowerCase().trim() === cleanId) return true;
+      // 3. Mobile Phone match (exact, or clean digit match)
+      if (s.phone) {
+        const sCleanPhone = s.phone.toLowerCase().trim();
+        const sPhoneDigits = s.phone.replace(/\D/g, '');
+        if (sCleanPhone === cleanId) return true;
+        if (cleanDigits.length >= 8 && sPhoneDigits.length >= 8) {
+          if (sPhoneDigits === cleanDigits) return true;
+          if (sPhoneDigits.endsWith(cleanDigits) || cleanDigits.endsWith(sPhoneDigits)) return true;
+        }
+      }
+      // 4. Name match (case-insensitive)
+      if (s.name && s.name.toLowerCase().trim() === cleanId) return true;
+      // 5. Admin alias
+      if ((cleanId === 'admin' || cleanId === 'administrator') && s.role === 'admin') return true;
+      return false;
+    });
 
     if (!matchedStaff) {
-      setStaffError(`Staff record with User ID "${staffIdOrEmail}" not found. Please enter a valid Staff User ID.`);
+      setStaffError(
+        `"${cleanInput}" আইডি বা মোবাইল নম্বরের কোনো স্টাফ অ্যাকাউন্ট পাওয়া যায়নি। সঠিক আইডি প্রদান করুন অথবা এডমিন প্যানেলে চেক করুন। (No staff found with ID or Mobile "${cleanInput}". Please verify credentials.)`
+      );
       return;
     }
 
     // Verify Password strictly against staff profile configured by Admin
-    const requiredPassword = matchedStaff.password || '123456';
+    const enteredPassword = staffPassword.trim();
+    const requiredPassword = (matchedStaff.password || '123456').trim();
     const isPasswordValid =
-      staffPassword.trim() === requiredPassword ||
+      enteredPassword === requiredPassword ||
+      (!matchedStaff.password && enteredPassword === '123456') ||
       (matchedStaff.role === 'admin' &&
-        (staffPassword.trim() === 'admin123' ||
-          staffPassword.trim() === '123456' ||
-          staffPassword.trim() === 'admin'));
+        (enteredPassword === 'admin123' ||
+          enteredPassword === '123456' ||
+          enteredPassword === 'admin'));
 
     if (!isPasswordValid) {
-      setStaffError('ভুল পাসওয়ার্ড! এডমিন কর্তৃক নির্ধারিত পাসওয়ার্ড প্রদান করুন। (Incorrect password. Please enter the password configured by your Administrator.)');
+      setStaffError(
+        'ভুল পাসওয়ার্ড! এডমিন কর্তৃক নির্ধারিত পাসওয়ার্ড প্রদান করুন। (Incorrect password. Please enter the password configured by your Administrator.)'
+      );
       return;
     }
 
@@ -137,19 +160,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
         ? ['dashboard']
         : matchedStaff.allowedTabs && matchedStaff.allowedTabs.length > 0
         ? matchedStaff.allowedTabs
-        : [];
-
-    if (allowed.length === 0) {
-      setStaffError(
-        `ইউজার আইডি "${matchedStaff.id}"-র কোনো সেকশনে এক্সেস পারমিশন দেওয়া নেই। এডমিনের সাথে যোগাযোগ করুন। (No sections permitted for this User ID. Please contact Administrator.)`
-      );
-      return;
-    }
+        : ['dashboard'];
 
     const session: AuthSession = {
       isAuthenticated: true,
       type: 'staff',
-      staffUser: matchedStaff,
+      staffUser: {
+        ...matchedStaff,
+        allowedTabs: allowed,
+      },
       loginTime: new Date().toISOString(),
     };
     onLoginSuccess(session);
@@ -343,15 +362,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
                 <form onSubmit={handleStaffLogin} className="space-y-4 text-xs">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      Staff ID or Email *
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                      <span>Staff ID, Mobile or Email *</span>
+                      <span className="text-[10px] text-purple-300/80 font-normal lowercase">(আইডি, মোবাইল বা ইমেইল)</span>
                     </label>
                     <div className="relative">
                       <UserCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         required
-                        placeholder="e.g. STF-04 or admin@medpulse.bd"
+                        placeholder="e.g. STF-04, 01711-234567, or user ID"
                         value={staffIdOrEmail}
                         onChange={(e) => setStaffIdOrEmail(e.target.value)}
                         className="w-full pl-10 pr-3 py-2.5 bg-slate-950/60 border border-slate-700 rounded-xl font-mono text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"

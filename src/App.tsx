@@ -144,7 +144,15 @@ export default function App() {
     if (Array.isArray(cloudData.prescriptions)) setPrescriptions(cloudData.prescriptions);
     if (Array.isArray(cloudData.labReports)) setLabReports(cloudData.labReports);
     if (Array.isArray(cloudData.appointments)) setAppointments(cloudData.appointments);
-    if (Array.isArray(cloudData.staff)) setStaff(cloudData.staff);
+    if (Array.isArray(cloudData.staff)) {
+      const normalizedStaff = cloudData.staff.map((s: Staff) => ({
+        ...s,
+        password: s.password || '123456',
+        allowedTabs: s.allowedTabs && s.allowedTabs.length > 0 ? s.allowedTabs : ['dashboard'],
+      }));
+      setStaff(normalizedStaff);
+      saveStaff(normalizedStaff);
+    }
     if (Array.isArray(cloudData.beds)) setBeds(cloudData.beds);
     if (Array.isArray(cloudData.ipdAdmissions)) setIpdAdmissions(cloudData.ipdAdmissions);
     if (Array.isArray(cloudData.pharmacyMedicines)) setPharmacyMedicines(cloudData.pharmacyMedicines);

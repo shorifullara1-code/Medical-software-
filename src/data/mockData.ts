@@ -31,6 +31,7 @@ export const INITIAL_HOSPITAL_SETTINGS: HospitalSettings = {
   labDept: 'DEPARTMENT OF PATHOLOGY & CLINICAL LAB',
   appointmentDept: 'DEPARTMENT OF OUTPATIENT (OPD) & APPOINTMENT DESK',
   footerNotice: 'For emergency assistance, call our helpline at 10678. Stay healthy, stay safe.',
+  softwareCredits: 'Software By : Shoriful Islam',
   autoChargeBedRentHours: 24,
   bedRates: {
     'General Ward': 800,

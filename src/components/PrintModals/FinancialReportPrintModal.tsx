@@ -355,7 +355,7 @@ export const FinancialReportPrintModal: React.FC<FinancialReportPrintModalProps>
 
             <div className="mt-4 pt-2 border-t border-slate-200 text-center text-[9px] text-slate-500 flex items-center justify-between">
               <span>{hospitalSettings.govtRegNo || 'DGHS Reg No: Verified'}</span>
-              <span>{hospitalSettings.footerNotice || 'Computer-generated official financial audit statement.'}</span>
+              <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
               <span>Page 1/1 (A4)</span>
             </div>
           </div>

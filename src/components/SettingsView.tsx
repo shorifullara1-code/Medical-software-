@@ -991,6 +991,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Software Developer & System Credits (প্রিন্ট ডকুমেন্টের নিচের ক্রেডিট)</span>
+                  <span className="text-[10px] text-teal-700 font-bold">Default: Software By : Shoriful Islam</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.softwareCredits || 'Software By : Shoriful Islam'}
+                  onChange={(e) => handleChange('softwareCredits', e.target.value)}
+                  placeholder="e.g. Software By : Shoriful Islam"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono font-bold"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  প্রেসক্রিপশন, মানি রিসিপ্ট, অ্যাডমিশন স্লিপ, ল্যাব রিপোর্ট, ডিসচার্জ পেপার সহ সকল পেপারের নিচে এটি প্রিন্ট হবে।
+                </p>
+              </div>
             </div>
 
             {/* Save Button */}
@@ -1205,9 +1222,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
 
-              {/* Footer Notice */}
-              <div className="pt-2 border-t border-slate-300 text-center text-[8px] text-slate-500">
-                {formData.footerNotice || 'For emergency medical assistance, contact helpline.'}
+              {/* Footer Notice & Software Credits */}
+              <div className="pt-2 border-t border-slate-300 flex items-center justify-between text-[8px] text-slate-500 font-medium">
+                <span>{formData.footerNotice || 'For emergency medical assistance, contact helpline.'}</span>
+                <span className="font-bold text-slate-800">{formData.softwareCredits || 'Software By : Shoriful Islam'}</span>
               </div>
             </div>
           </div>

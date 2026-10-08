@@ -380,9 +380,10 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 </div>
               </div>
 
-              <p className="text-center text-[9px] text-slate-400 mt-2">
-                * This is a computer generated official money receipt. Barcodes on top correspond to Patient ID & Invoice Reference.
-              </p>
+              <div className="mt-3 pt-1 border-t border-slate-200 flex items-center justify-between text-[9px] text-slate-500 font-medium">
+                <span>* Computer generated official money receipt. Barcodes correspond to Patient ID & Invoice Reference.</span>
+                <span className="font-bold text-slate-800 tracking-wide">Software By : Shoriful Islam</span>
+              </div>
             </div>
           </div>
         </div>

@@ -123,8 +123,13 @@ export const loadActiveUser = (): Staff => {
 
 export const saveActiveUser = (user: Staff) => safeSet(STORAGE_KEYS.ACTIVE_USER, user);
 
-export const loadHospitalSettings = (): HospitalSettings =>
-  safeGet(STORAGE_KEYS.HOSPITAL_SETTINGS, INITIAL_HOSPITAL_SETTINGS);
+export const loadHospitalSettings = (): HospitalSettings => {
+  const loaded = safeGet<HospitalSettings>(STORAGE_KEYS.HOSPITAL_SETTINGS, INITIAL_HOSPITAL_SETTINGS);
+  return {
+    ...loaded,
+    softwareCredits: loaded.softwareCredits || 'Software By : Shoriful Islam',
+  };
+};
 export const saveHospitalSettings = (settings: HospitalSettings) =>
   safeSet(STORAGE_KEYS.HOSPITAL_SETTINGS, settings);
 
