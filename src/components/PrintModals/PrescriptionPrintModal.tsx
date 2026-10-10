@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, Phone, MapPin, Globe, Download, PenTool, Layout, FileText } from 'lucide-react';
 import { Prescription, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
+import { QRCodeRenderer } from '../QRCodeRenderer';
 import { HospitalEmblem } from '../HospitalEmblem';
 import { loadHospitalSettings } from '../../utils/storage';
 
@@ -142,32 +143,44 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
               <div className="py-2.5 px-3 border-b border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/50">
                 {/* Left: Patient ID Barcode (Identical to Health Card) */}
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                    Patient Health ID Barcode
+                    পেশেন্ট আইডি বারকোড (Patient ID)
                   </span>
-                  <BarcodeRenderer
-                    value={prescription.patientId}
-                    height={44}
-                    width={1.5}
-                    fontSize={11}
-                    margin={8}
-                  />
+                  <div className="flex items-center justify-center gap-3 w-full">
+                    <BarcodeRenderer
+                      value={prescription.patientId}
+                      height={44}
+                      width={1.6}
+                      fontSize={11}
+                      margin={6}
+                    />
+                    <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                      <QRCodeRenderer value={prescription.patientId} size={44} margin={1} />
+                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right: Prescription Barcode */}
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-purple-600"></span>
-                    Official Prescription Barcode
+                    প্রেসক্রিপশন বারকোড (Rx Code)
                   </span>
-                  <BarcodeRenderer
-                    value={prescription.id}
-                    height={44}
-                    width={1.5}
-                    fontSize={11}
-                    margin={8}
-                  />
+                  <div className="flex items-center justify-center gap-3 w-full">
+                    <BarcodeRenderer
+                      value={prescription.id}
+                      height={44}
+                      width={1.6}
+                      fontSize={11}
+                      margin={6}
+                    />
+                    <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                      <QRCodeRenderer value={prescription.id} size={44} margin={1} />
+                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

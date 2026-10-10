@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Printer, Download, Pill, AlertTriangle, CheckCircle2, Bed } from 'lucide-react';
 import { PharmacySale, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
+import { QRCodeRenderer } from '../QRCodeRenderer';
 import { HospitalEmblem } from '../HospitalEmblem';
 import { loadHospitalSettings } from '../../utils/storage';
 
@@ -97,11 +98,56 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
                 </div>
 
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className="px-3 py-1 rounded bg-teal-900 text-white text-[11px] font-black uppercase tracking-wider">
-                    PHARMACY DISPENSARY & CASH COUNTER
+                  <span className="px-3 py-1.5 rounded-lg bg-teal-900 text-white text-[11px] font-black uppercase tracking-wider shadow-xs">
+                    PHARMACY DISPENSARY & CASH RECEIPT
                   </span>
-                  <div className="mt-1 bg-white p-2 rounded-xl border border-slate-200 flex flex-col items-center shadow-xs">
-                    <BarcodeRenderer value={sale.patientId || sale.invoiceNumber || sale.id} height={48} width={1.8} fontSize={12} margin={14} />
+                  <span className="text-[10px] font-bold text-teal-800 font-mono">
+                    Official Cash Counter Copy
+                  </span>
+                </div>
+              </div>
+
+              {/* Dual Barcode Strip: Left = Patient ID Barcode, Right = Pharmacy Invoice Barcode */}
+              <div className="mt-4 p-2.5 bg-slate-50 border border-slate-300 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Left: Patient ID Barcode & QR */}
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                  <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                    পেশেন্ট আইডি বারকোড (Patient ID)
+                  </span>
+                  <div className="flex items-center justify-center gap-3 w-full">
+                    <BarcodeRenderer
+                      value={sale.patientId || 'WALK-IN'}
+                      height={44}
+                      width={1.6}
+                      fontSize={11}
+                      margin={6}
+                    />
+                    <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                      <QRCodeRenderer value={sale.patientId || 'WALK-IN'} size={44} margin={1} />
+                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Pharmacy Invoice Barcode & QR */}
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                  <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-teal-600"></span>
+                    ইনভয়েস বারকোড (Receipt / Bill No)
+                  </span>
+                  <div className="flex items-center justify-center gap-3 w-full">
+                    <BarcodeRenderer
+                      value={sale.invoiceNumber || sale.id}
+                      height={44}
+                      width={1.6}
+                      fontSize={11}
+                      margin={6}
+                    />
+                    <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                      <QRCodeRenderer value={sale.invoiceNumber || sale.id} size={44} margin={1} />
+                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                    </div>
                   </div>
                 </div>
               </div>

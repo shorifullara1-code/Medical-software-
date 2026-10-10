@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Printer, Phone, MapPin, Droplet, User, Calendar } from 'lucide-react';
 import { Patient, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
+import { QRCodeRenderer } from '../QRCodeRenderer';
 import { HospitalEmblem } from '../HospitalEmblem';
 import { loadHospitalSettings } from '../../utils/storage';
 
@@ -87,9 +88,27 @@ export const PatientCardPrintModal: React.FC<PatientCardPrintModalProps> = ({
               <p className="text-xs font-mono text-slate-600">{patient.phone}</p>
             </div>
 
-            {/* Central Barcode */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-2 w-full flex flex-col items-center">
-              <BarcodeRenderer value={patient.id} height={44} width={1.6} fontSize={12} />
+            {/* Dual Smart Scan Zone: 1D Barcode (Laser Gun) + 2D QR (Instant Mobile Camera/Screen) */}
+            <div className="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-xs my-2 w-full flex items-center justify-between gap-2">
+              <div className="flex-1 flex flex-col items-center">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                  1D Barcode (Laser / Gun Reader)
+                </span>
+                <BarcodeRenderer
+                  value={patient.id}
+                  height={44}
+                  width={1.6}
+                  fontSize={11}
+                  margin={6}
+                />
+              </div>
+              <div className="h-14 w-px bg-slate-200 shrink-0"></div>
+              <div className="flex flex-col items-center shrink-0 pr-1">
+                <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">
+                  Mobile QR
+                </span>
+                <QRCodeRenderer value={patient.id} size={50} margin={1} />
+              </div>
             </div>
 
             {/* Emergency & Address */}

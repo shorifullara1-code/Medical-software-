@@ -257,6 +257,10 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setMatchedScanResult(null);
     } else {
       fastScannerRef.current?.resetScannedMemory();
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 150);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -380,14 +384,32 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
         {/* Live Camera View Box */}
         <div className={`p-4 bg-slate-900 border-b border-slate-800 flex flex-col items-center ${isCameraActive ? 'block' : 'hidden'}`}>
-          <div className="w-full max-w-sm rounded-xl overflow-hidden border-2 border-emerald-400 shadow-lg relative bg-black min-h-[160px]">
+          <div className="w-full max-w-sm rounded-xl overflow-hidden border-2 border-emerald-400 shadow-lg relative bg-black min-h-[180px]">
             <div id={html5QrCodeRegionId} className="w-full"></div>
+            {/* Viewfinder corner guides */}
+            <div className="absolute inset-3 pointer-events-none border border-emerald-400/30 rounded-lg flex flex-col justify-between p-2">
+              <div className="flex justify-between">
+                <div className="w-4 h-4 border-t-2 border-l-2 border-emerald-400"></div>
+                <div className="w-4 h-4 border-t-2 border-r-2 border-emerald-400"></div>
+              </div>
+              <div className="flex justify-between">
+                <div className="w-4 h-4 border-b-2 border-l-2 border-emerald-400"></div>
+                <div className="w-4 h-4 border-b-2 border-r-2 border-emerald-400"></div>
+              </div>
+            </div>
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)] animate-pulse pointer-events-none"></div>
           </div>
-          <p className="text-xs text-slate-300 mt-2 flex items-center gap-1.5">
-            <Scan className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-            Hold the printed barcode straight in front of camera...
-          </p>
+          <div className="mt-2.5 text-center px-4 w-full max-w-sm">
+            <p className="text-xs font-semibold text-emerald-300 flex items-center justify-center gap-1.5">
+              <Scan className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+              মোবাইল/কম্পিউটার স্ক্রিন বা কাগজের বারকোড অথবা QR কোড সামনে ধরুন
+            </p>
+            {scanFeedback && (
+              <p className="text-xs font-bold text-emerald-200 mt-1.5 bg-emerald-950/80 border border-emerald-600/50 px-3 py-1.5 rounded-lg shadow-sm">
+                {scanFeedback}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Quick Demo Barcode Buttons */}

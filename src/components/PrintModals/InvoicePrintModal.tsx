@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, Download, AlertCircle, Compass, MapPin, Building } from 'lucide-react';
 import { Invoice, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
+import { QRCodeRenderer } from '../QRCodeRenderer';
 import { HospitalEmblem } from '../HospitalEmblem';
 import { loadHospitalSettings } from '../../utils/storage';
 
@@ -106,36 +107,48 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                   </span>
                 </div>
 
-                {/* Dual-Barcode Strip: Left = Patient ID, Right = Invoice Barcode */}
+                {/* Dual-Barcode & QR Strip: Left = Patient ID, Right = Invoice No */}
                 <div className="p-3 border-b border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/50">
-                  {/* Left: Patient ID Barcode (Identical to Health Card) */}
+                  {/* Left: Patient ID Barcode (বাম পাশে পেশেন্ট আইডির বারকোড) + QR Code */}
                   <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                      Patient Health ID Barcode
+                      পেশেন্ট আইডি বারকোড (Patient ID)
                     </span>
-                    <BarcodeRenderer
-                      value={invoice.patientId}
-                      height={44}
-                      width={1.5}
-                      fontSize={11}
-                      margin={8}
-                    />
+                    <div className="flex items-center justify-center gap-3 w-full">
+                      <BarcodeRenderer
+                        value={invoice.patientId}
+                        height={46}
+                        width={1.6}
+                        fontSize={11}
+                        margin={8}
+                      />
+                      <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                        <QRCodeRenderer value={invoice.patientId} size={48} margin={1} />
+                        <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Right: Invoice No Barcode */}
+                  {/* Right: Invoice No Barcode (ডান পাশে ইনভয়েসের বারকোড) + QR Code */}
                   <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
-                      Money Receipt / Bill Barcode
+                      ইনভয়েস বারকোড (Invoice No)
                     </span>
-                    <BarcodeRenderer
-                      value={invoice.id}
-                      height={44}
-                      width={1.5}
-                      fontSize={11}
-                      margin={8}
-                    />
+                    <div className="flex items-center justify-center gap-3 w-full">
+                      <BarcodeRenderer
+                        value={invoice.id}
+                        height={46}
+                        width={1.6}
+                        fontSize={11}
+                        margin={8}
+                      />
+                      <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
+                        <QRCodeRenderer value={invoice.id} size={48} margin={1} />
+                        <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
