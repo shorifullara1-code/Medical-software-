@@ -89,26 +89,32 @@ export const PatientCardPrintModal: React.FC<PatientCardPrintModalProps> = ({
             </div>
 
             {/* Dual Smart Scan Zone: 1D Barcode (Laser Gun) + 2D QR (Instant Mobile Camera/Screen) */}
-            <div className="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-xs my-2 w-full flex items-center justify-between gap-2">
-              <div className="flex-1 flex flex-col items-center">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                  1D Barcode (Laser / Gun Reader)
-                </span>
-                <BarcodeRenderer
-                  value={patient.id}
-                  height={44}
-                  width={1.6}
-                  fontSize={11}
-                  margin={6}
-                />
+            <div className="bg-white p-3.5 rounded-2xl border-2 border-emerald-400 shadow-sm my-2.5 w-full flex flex-col items-center gap-2.5">
+              <div className="w-full flex items-center justify-between gap-3 bg-slate-50/60 p-2 rounded-xl border border-slate-200">
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                    1D Barcode (Laser Gun)
+                  </span>
+                  <BarcodeRenderer
+                    value={patient.id}
+                    height={46}
+                    width={1.6}
+                    fontSize={11}
+                    margin={6}
+                  />
+                </div>
+                <div className="flex flex-col items-center shrink-0 pl-2.5 border-l-2 border-emerald-200">
+                  <span className="text-[9px] font-black text-emerald-800 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping"></span>
+                    Mobile Camera QR
+                  </span>
+                  <QRCodeRenderer value={patient.id} size={92} margin={3} />
+                </div>
               </div>
-              <div className="h-14 w-px bg-slate-200 shrink-0"></div>
-              <div className="flex flex-col items-center shrink-0 pr-1">
-                <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">
-                  Mobile QR
-                </span>
-                <QRCodeRenderer value={patient.id} size={50} margin={1} />
-              </div>
+              <span className="text-[9px] font-bold text-emerald-950 bg-emerald-100/80 px-3 py-1 rounded-full border border-emerald-300 w-full text-center">
+                স্মার্ট হেলথ কার্ড: ক্যামেরা বা বারকোড গান দিয়ে তাৎক্ষণিক স্ক্যানযোগ্য
+              </span>
             </div>
 
             {/* Emergency & Address */}

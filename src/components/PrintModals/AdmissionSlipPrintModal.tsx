@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, Download, Bed, ShieldCheck, HeartPulse, Stethoscope, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { IPDAdmission, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
+import { QRCodeRenderer } from '../QRCodeRenderer';
 import { HospitalEmblem } from '../HospitalEmblem';
 import { loadHospitalSettings } from '../../utils/storage';
 
@@ -139,16 +140,48 @@ export const AdmissionSlipPrintModal: React.FC<AdmissionSlipPrintModalProps> = (
                   </span>
                 </div>
 
-                {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
-                <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
-                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
-                    <BarcodeRenderer
-                      value={activeBarcodeValue}
-                      height={48}
-                      width={1.8}
-                      fontSize={12}
-                      margin={14}
-                    />
+                {/* Dual-Barcode & QR Strip: Left = Patient ID, Right = Admission Number */}
+                <div className="p-2.5 border-b border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/60">
+                  {/* Left: Patient ID Barcode + Mobile QR */}
+                  <div className="bg-white p-2.5 rounded-xl border border-emerald-300 shadow-2xs flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                      পেশেন্ট আইডি (Patient ID)
+                    </span>
+                    <div className="flex items-center justify-center gap-2.5 w-full">
+                      <BarcodeRenderer
+                        value={admission.patientId}
+                        height={44}
+                        width={1.6}
+                        fontSize={11}
+                        margin={6}
+                      />
+                      <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2">
+                        <QRCodeRenderer value={admission.patientId} size={76} margin={3} />
+                        <span className="text-[8px] font-black text-emerald-800 uppercase mt-0.5">Mobile QR</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Admission No Barcode + Mobile QR */}
+                  <div className="bg-white p-2.5 rounded-xl border border-purple-300 shadow-2xs flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                      এডমিশন আইডি বারকোড (Admission No)
+                    </span>
+                    <div className="flex items-center justify-center gap-2.5 w-full">
+                      <BarcodeRenderer
+                        value={admission.admissionNumber || admission.id}
+                        height={44}
+                        width={1.6}
+                        fontSize={11}
+                        margin={6}
+                      />
+                      <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2">
+                        <QRCodeRenderer value={admission.admissionNumber || admission.id} size={76} margin={3} />
+                        <span className="text-[8px] font-black text-purple-800 uppercase mt-0.5">Mobile QR</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

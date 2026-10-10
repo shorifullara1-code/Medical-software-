@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileText,
   PlusCircle,
@@ -38,6 +38,13 @@ export const PrescriptionView: React.FC<PrescriptionViewProps> = ({
 
   // Form State
   const [selectedPatientId, setSelectedPatientId] = useState<string>(preselectedPatientId || (patients[0]?.id ?? ''));
+
+  useEffect(() => {
+    if (preselectedPatientId) {
+      setSelectedPatientId(preselectedPatientId);
+      setIsCreateModalOpen(true);
+    }
+  }, [preselectedPatientId]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
     staff.find((s) => s.role === 'doctor')?.id || ''
   );

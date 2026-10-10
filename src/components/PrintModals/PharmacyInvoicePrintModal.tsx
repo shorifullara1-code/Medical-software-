@@ -108,9 +108,9 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
               </div>
 
               {/* Dual Barcode Strip: Left = Patient ID Barcode, Right = Pharmacy Invoice Barcode */}
-              <div className="mt-4 p-2.5 bg-slate-50 border border-slate-300 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="mt-4 p-3 bg-slate-50 border border-slate-300 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Left: Patient ID Barcode & QR */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                <div className="bg-white p-3 rounded-2xl border-2 border-emerald-300 shadow-xs flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
                     পেশেন্ট আইডি বারকোড (Patient ID)
@@ -124,14 +124,14 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
                       margin={6}
                     />
                     <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
-                      <QRCodeRenderer value={sale.patientId || 'WALK-IN'} size={44} margin={1} />
-                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      <QRCodeRenderer value={sale.patientId || 'WALK-IN'} size={68} margin={3} />
+                      <span className="text-[8px] font-black text-emerald-800 uppercase mt-0.5">Mobile QR</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Right: Pharmacy Invoice Barcode & QR */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                <div className="bg-white p-3 rounded-2xl border-2 border-teal-300 shadow-xs flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-teal-600"></span>
                     ইনভয়েস বারকোড (Receipt / Bill No)
@@ -145,8 +145,8 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
                       margin={6}
                     />
                     <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
-                      <QRCodeRenderer value={sale.invoiceNumber || sale.id} size={44} margin={1} />
-                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      <QRCodeRenderer value={sale.invoiceNumber || sale.id} size={68} margin={3} />
+                      <span className="text-[8px] font-black text-teal-800 uppercase mt-0.5">Mobile QR</span>
                     </div>
                   </div>
                 </div>

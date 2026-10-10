@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
 interface QRCodeRendererProps {
@@ -14,42 +14,50 @@ interface QRCodeRendererProps {
 
 export const QRCodeRenderer: React.FC<QRCodeRendererProps> = ({
   value,
-  size = 64,
+  size = 80,
   className = '',
-  margin = 1,
+  margin = 4,
   color = { dark: '#000000', light: '#ffffff' },
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [dataUrl, setDataUrl] = useState<string>('');
 
   useEffect(() => {
-    if (!canvasRef.current || !value) return;
-
-    try {
-      QRCode.toCanvas(canvasRef.current, String(value).trim(), {
-        width: size,
-        margin: margin,
-        color: {
-          dark: color.dark || '#000000',
-          light: color.light || '#ffffff',
-        },
-        errorCorrectionLevel: 'M',
-      });
-    } catch (err) {
-      console.warn('QR Code generation error:', err);
+    if (!value) {
+      setDataUrl('');
+      return;
     }
+
+    const cleanValue = String(value).trim();
+    // Generate high resolution data URL for ultra-sharp camera readability and print support
+    QRCode.toDataURL(cleanValue, {
+      width: Math.max(size * 3, 300),
+      margin: Math.max(margin, 2),
+      color: {
+        dark: color.dark || '#000000',
+        light: color.light || '#ffffff',
+      },
+      errorCorrectionLevel: 'H', // High error correction for robust scannability
+    })
+      .then((url) => {
+        setDataUrl(url);
+      })
+      .catch((err) => {
+        console.warn('QR Code generation error:', err);
+      });
   }, [value, size, margin, color]);
 
-  if (!value) return null;
+  if (!value || !dataUrl) return null;
 
   return (
-    <div className={`inline-flex flex-col items-center justify-center bg-white rounded-lg p-1 ${className}`}>
-      <canvas
-        ref={canvasRef}
+    <div className={`inline-flex flex-col items-center justify-center bg-white rounded-xl p-1.5 shadow-xs border border-slate-200/80 ${className}`}>
+      <img
+        src={dataUrl}
+        alt={`QR: ${value}`}
         className="block select-none rounded"
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          imageRendering: 'pixelated',
+          imageRendering: 'crisp-edges',
         }}
       />
     </div>

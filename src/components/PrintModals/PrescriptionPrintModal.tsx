@@ -142,7 +142,7 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
               {/* Dual-Barcode Strip: Left = Patient ID Barcode, Right = Prescription Barcode */}
               <div className="py-2.5 px-3 border-b border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/50">
                 {/* Left: Patient ID Barcode (Identical to Health Card) */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                <div className="bg-white p-3 rounded-2xl border-2 border-emerald-300 shadow-xs flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
                     পেশেন্ট আইডি বারকোড (Patient ID)
@@ -156,14 +156,14 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
                       margin={6}
                     />
                     <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
-                      <QRCodeRenderer value={prescription.patientId} size={44} margin={1} />
-                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      <QRCodeRenderer value={prescription.patientId} size={68} margin={3} />
+                      <span className="text-[8px] font-black text-emerald-800 uppercase mt-0.5">Mobile QR</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Right: Prescription Barcode */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                <div className="bg-white p-3 rounded-2xl border-2 border-purple-300 shadow-xs flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-purple-600"></span>
                     প্রেসক্রিপশন বারকোড (Rx Code)
@@ -177,8 +177,8 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
                       margin={6}
                     />
                     <div className="flex flex-col items-center shrink-0 border-l border-slate-200 pl-2.5">
-                      <QRCodeRenderer value={prescription.id} size={44} margin={1} />
-                      <span className="text-[7.5px] font-bold text-slate-500 uppercase mt-0.5">Mobile QR</span>
+                      <QRCodeRenderer value={prescription.id} size={68} margin={3} />
+                      <span className="text-[8px] font-black text-purple-800 uppercase mt-0.5">Mobile QR</span>
                     </div>
                   </div>
                 </div>

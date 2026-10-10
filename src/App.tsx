@@ -357,6 +357,8 @@ export default function App() {
     action: 'prescribe' | 'bill' | 'collect_due' | 'lab' | 'appointment' | 'delivery' | 'ipd' | 'pharmacy',
     patientId: string
   ) => {
+    console.log('[SCANNER_ACTION] handleScannerSelectAction called:', { action, patientId, user: currentUser.name, role: currentUser.role });
+
     const actionToTabMap: Record<string, TabType> = {
       prescribe: 'prescriptions',
       bill: 'billing',
@@ -1024,6 +1026,7 @@ export default function App() {
         onOpenLabReportPrint={(lab) => setPrintLabReport(lab)}
         onOpenAppointmentPrint={(apt) => setPrintAppointment(apt)}
         onOpenAdmissionSlipPrint={(adm) => setPrintAdmissionSlip(adm)}
+        onOpenPatientCardPrint={(patient) => setPrintPatientCard(patient)}
       />
 
       {/* Official Print Modals */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   PlusCircle,
@@ -71,6 +71,13 @@ export const LabReportCenterView: React.FC<LabReportCenterViewProps> = ({
 
   // Form State for Report Entry
   const [selectedPatientId, setSelectedPatientId] = useState<string>(preselectedPatientId || (patients[0]?.id ?? ''));
+
+  useEffect(() => {
+    if (preselectedPatientId) {
+      setSelectedPatientId(preselectedPatientId);
+      setIsEntryModalOpen(true);
+    }
+  }, [preselectedPatientId]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(STANDARD_TEST_TEMPLATES[0].id);
   const [referringDoctor, setReferringDoctor] = useState(
     staff.find((s) => s.role === 'doctor')?.name || 'Dr. Rafiqul Islam'
