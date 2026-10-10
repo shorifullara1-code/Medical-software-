@@ -848,6 +848,7 @@ export default function App() {
                 patients={patients}
                 admissions={ipdAdmissions}
                 prescriptions={prescriptions}
+                invoices={invoices}
                 currentUser={currentUser}
                 hospitalSettings={hospitalSettings}
                 onSaveSale={handleSavePharmacySale}

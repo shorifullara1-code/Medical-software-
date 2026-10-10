@@ -14,37 +14,49 @@ export interface FastScannerOptions {
 }
 
 /**
- * Optimized Small-Canvas Image Enhancer for Blurry Barcodes (Runs on 400x300 thumbnail)
+ * High-Resolution Center-Crop Image Enhancer for Paper Barcodes (Prescriptions & Money Receipts)
+ * Crops the center area at 1:1 native resolution where the user aligns the paper barcode
  */
-export function enhanceBlurryImageCanvas(
-  sourceCanvas: HTMLCanvasElement | HTMLVideoElement
-): HTMLCanvasElement {
+export function enhanceCenterCropCanvas(
+  video: HTMLVideoElement
+): HTMLCanvasElement | null {
+  const vWidth = video.videoWidth || 1280;
+  const vHeight = video.videoHeight || 720;
+  if (!vWidth || !vHeight) return null;
+
+  // Use full width of video frame (92%) and vertical center zone
+  const cropW = Math.floor(vWidth * 0.92);
+  const cropH = Math.floor(vHeight * 0.70);
+  const startX = Math.floor((vWidth - cropW) / 2);
+  const startY = Math.floor((vHeight - cropH) / 2);
+
   const canvas = document.createElement('canvas');
-  // Downscale to 400x300 for ultra-fast processing (<2ms)
-  canvas.width = 400;
-  canvas.height = 300;
+  canvas.width = cropW;
+  canvas.height = cropH;
 
   const ctx = canvas.getContext('2d');
-  if (!ctx) return canvas;
+  if (!ctx) return null;
 
-  ctx.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+  // Draw 1:1 center crop at full resolution (bars remain crisp)
+  ctx.drawImage(video, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
 
   try {
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0, 0, cropW, cropH);
     const d = imgData.data;
 
-    // High Contrast Boost (1.8x)
+    // Linear grayscale conversion with mild contrast boost without hard threshold clipping
     for (let i = 0; i < d.length; i += 4) {
-      let gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      gray = gray > 110 ? 255 : 0; // Quick Binarization
-      d[i] = gray;
-      d[i + 1] = gray;
-      d[i + 2] = gray;
+      const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      // Mild linear contrast enhancement preserving barcode edges
+      const boosted = Math.min(255, Math.max(0, (gray - 128) * 1.3 + 128));
+      d[i] = boosted;
+      d[i + 1] = boosted;
+      d[i + 2] = boosted;
     }
 
     ctx.putImageData(imgData, 0, 0);
   } catch (e) {
-    // Ignore canvas security or read issues
+    // Fallback to un-modified canvas
   }
 
   return canvas;
@@ -97,7 +109,7 @@ export class FastBarcodeEngine {
     // 1. Check Native Hardware BarcodeDetector support
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
       try {
-        const formats = [
+        let formats = [
           'qr_code',
           'code_128',
           'code_39',
@@ -105,11 +117,20 @@ export class FastBarcodeEngine {
           'ean_8',
           'upc_a',
           'upc_e',
-          'data_matrix',
-          'pdf417',
-          'itf',
         ];
-        this.nativeDetector = new window.BarcodeDetector({ formats });
+        if (typeof (window.BarcodeDetector as any).getSupportedFormats === 'function') {
+          const supported = await (window.BarcodeDetector as any).getSupportedFormats();
+          if (Array.isArray(supported) && supported.length > 0) {
+            formats = formats.filter((f) => supported.includes(f));
+          }
+        }
+        // ONLY use native BarcodeDetector if it supports 1D Code 128 barcodes
+        if (formats.includes('code_128')) {
+          this.nativeDetector = new window.BarcodeDetector({ formats });
+        } else {
+          // Native detector only supports QR or lacks Code 128 - fallback to Html5Qrcode
+          this.nativeDetector = null;
+        }
       } catch (e) {
         console.warn('Native BarcodeDetector init fallback:', e);
         this.nativeDetector = null;
@@ -135,7 +156,8 @@ export class FastBarcodeEngine {
     video.muted = true;
     video.style.width = '100%';
     video.style.height = '100%';
-    video.style.objectFit = 'cover';
+    video.style.objectFit = 'contain';
+    video.style.backgroundColor = '#000000';
     container.appendChild(video);
     this.videoElement = video;
 
@@ -168,23 +190,29 @@ export class FastBarcodeEngine {
 
       if (this.videoElement.readyState === this.videoElement.HAVE_ENOUGH_DATA) {
         try {
-          // Native GPU scan on video element (Sub-3ms)
+          // 1. Native GPU scan on full video element (Sub-3ms)
           const barcodes = await this.nativeDetector.detect(this.videoElement);
           if (barcodes && barcodes.length > 0) {
-            const raw = barcodes[0].rawValue;
-            if (raw) {
-              this.triggerSuccess(raw);
+            for (const b of barcodes) {
+              if (b.rawValue && b.rawValue.trim()) {
+                this.triggerSuccess(b.rawValue.trim());
+                break;
+              }
             }
           } else {
-            // Every 10 frames (~300ms), try lightweight enhanced thumbnail pass for blurry barcodes
+            // 2. High-speed center-crop pass for paper barcodes (Prescriptions & Money Receipts)
             this.frameCounter++;
-            if (this.frameCounter % 10 === 0) {
-              const enhancedCanvas = enhanceBlurryImageCanvas(this.videoElement);
-              const enhancedBarcodes = await this.nativeDetector.detect(enhancedCanvas);
-              if (enhancedBarcodes && enhancedBarcodes.length > 0) {
-                const raw = enhancedBarcodes[0].rawValue;
-                if (raw) {
-                  this.triggerSuccess(raw);
+            if (this.frameCounter % 2 === 0) {
+              const centerCrop = enhanceCenterCropCanvas(this.videoElement);
+              if (centerCrop) {
+                const cropBarcodes = await this.nativeDetector.detect(centerCrop);
+                if (cropBarcodes && cropBarcodes.length > 0) {
+                  for (const cb of cropBarcodes) {
+                    if (cb.rawValue && cb.rawValue.trim()) {
+                      this.triggerSuccess(cb.rawValue.trim());
+                      break;
+                    }
+                  }
                 }
               }
             }
@@ -203,18 +231,15 @@ export class FastBarcodeEngine {
   }
 
   /**
-   * Optimized Html5Qrcode Fallback Engine
+   * Optimized Html5Qrcode Fallback Engine with Full-Frame Detection
    */
   private async startHtml5QrcodeStream(container: HTMLElement): Promise<void> {
     const formatsToSupport = [
-      Html5QrcodeSupportedFormats.QR_CODE,
       Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.QR_CODE,
       Html5QrcodeSupportedFormats.CODE_39,
       Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
       Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,
-      Html5QrcodeSupportedFormats.DATA_MATRIX,
     ];
 
     this.html5QrCode = new Html5Qrcode(this.containerId, {
@@ -222,20 +247,29 @@ export class FastBarcodeEngine {
       verbose: false,
     });
 
-    const config = {
-      fps: 20,
-      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
-        width: Math.min(viewfinderWidth - 10, 320),
-        height: Math.min(viewfinderHeight - 10, 200),
-      }),
-      aspectRatio: 1.5,
+    // Request high resolution camera stream so printed paper barcodes have crisp multi-pixel bars
+    const cameraConfig: any = {
+      facingMode: 'environment',
+      width: { min: 1280, ideal: 1920 },
+      height: { min: 720, ideal: 1080 },
+    };
+
+    // Optimized scanning: generous scanning area so full paper barcode and quiet zones are never clipped
+    const config: any = {
+      fps: 25,
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+        return {
+          width: Math.max(Math.floor(viewfinderWidth * 0.94), 280),
+          height: Math.max(Math.floor(viewfinderHeight * 0.85), 180),
+        };
+      },
       experimentalFeatures: {
         useBarCodeDetectorIfSupported: true,
       },
     };
 
     await this.html5QrCode.start(
-      { facingMode: 'environment' },
+      cameraConfig,
       config,
       (decodedText) => {
         this.triggerSuccess(decodedText);

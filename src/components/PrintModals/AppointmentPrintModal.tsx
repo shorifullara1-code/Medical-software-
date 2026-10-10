@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Printer, Download, CheckCircle2, ShieldCheck, Calendar, Clock, User, Stethoscope } from 'lucide-react';
 import { Appointment, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
@@ -19,6 +19,9 @@ export const AppointmentPrintModal: React.FC<AppointmentPrintModalProps> = ({
   if (!appointment) return null;
 
   const hospitalSettings = propSettings || loadHospitalSettings();
+  const [barcodeType, setBarcodeType] = useState<'patient' | 'appointment'>('patient');
+
+  const activeBarcodeValue = barcodeType === 'patient' ? appointment.patientId : appointment.id;
 
   const handlePrint = () => {
     window.print();
@@ -28,7 +31,7 @@ export const AppointmentPrintModal: React.FC<AppointmentPrintModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-4xl my-auto overflow-hidden">
         {/* Top Control Bar */}
-        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
               {appointment.id}
@@ -37,6 +40,34 @@ export const AppointmentPrintModal: React.FC<AppointmentPrintModalProps> = ({
               Appointment Letter & Token Slip Preview (A4)
             </span>
           </div>
+
+          {/* Barcode Mode Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+            <span className="text-slate-400 font-semibold px-1 text-[11px]">Barcode:</span>
+            <button
+              onClick={() => setBarcodeType('patient')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'patient'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Health Card Mode (Same barcode as Patient ID card) - guaranteed scanner detection"
+            >
+              Patient ID ({appointment.patientId})
+            </button>
+            <button
+              onClick={() => setBarcodeType('appointment')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'appointment'
+                  ? 'bg-indigo-500 text-white font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Appointment Token ID barcode"
+            >
+              Token No ({appointment.id})
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
@@ -84,36 +115,27 @@ export const AppointmentPrintModal: React.FC<AppointmentPrintModalProps> = ({
             </div>
 
             {/* 2. PATIENT & DUAL-BARCODE FRAMED BOX */}
-            <div className="border border-slate-600 text-xs mb-5 bg-white/90">
-              <div className="px-3 pt-2 pb-1.5 border-b border-slate-600 flex items-center justify-between gap-2">
-                <div className="flex flex-col items-start w-40 shrink-0">
-                  <BarcodeRenderer
-                    value={appointment.patientId}
-                    height={26}
-                    width={1.2}
-                    displayValue={false}
-                  />
-                  <span className="text-[8px] font-mono text-slate-500 font-bold mt-0.5">
-                    PATIENT ID: {appointment.patientId}
-                  </span>
-                </div>
+            <div className="border border-slate-600 text-xs mb-5 bg-white">
+              {/* Title Header */}
+              <div className="px-3 pt-2.5 pb-2 border-b border-slate-300 text-center">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide font-sans">
+                  APPOINTMENT CONFIRMATION LETTER
+                </h2>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Doctor Consultation Appointment Token
+                </span>
+              </div>
 
-                <div className="flex-1 text-center">
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide font-sans">
-                    APPOINTMENT CONFIRMATION LETTER
-                  </h2>
-                </div>
-
-                <div className="flex flex-col items-end w-40 shrink-0">
+              {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
+              <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
                   <BarcodeRenderer
-                    value={appointment.id}
-                    height={26}
-                    width={1.2}
-                    displayValue={false}
+                    value={activeBarcodeValue}
+                    height={48}
+                    width={1.8}
+                    fontSize={12}
+                    margin={14}
                   />
-                  <span className="text-[8px] font-mono text-slate-500 font-bold mt-0.5">
-                    SLIP ID: {appointment.id}
-                  </span>
                 </div>
               </div>
 

@@ -73,27 +73,35 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [scannedPatient, setScannedPatient] = useState<Patient | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+  const [matchedScanResult, setMatchedScanResult] = useState<{
+    type: 'patient' | 'invoice' | 'prescription' | 'admission' | 'lab';
+    id: string;
+    invoice?: Invoice;
+    prescription?: Prescription;
+  } | null>(null);
   const [isTorchSupported, setIsTorchSupported] = useState(false);
   const [isTorchOn, setIsTorchOn] = useState(false);
   const fastScannerRef = useRef<FastBarcodeEngine | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const html5QrCodeRegionId = 'interactive-barcode-reader';
 
-  // Handle hardware barcode scanner inputs (works globally)
+  // Handle hardware barcode scanner inputs (works globally with high latency tolerance)
   useEffect(() => {
     let buffer = '';
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 120) {
+      // 250ms threshold to prevent dropped characters from USB / wireless barcode guns
+      if (currentTime - lastKeyTime > 250) {
         buffer = '';
       }
       lastKeyTime = currentTime;
 
       if (e.key === 'Enter') {
-        if (buffer.trim().length >= 3) {
-          handleBarcodeScanned(buffer.trim());
+        const cleanCode = buffer.replace(/[\r\n\t]/g, '').trim();
+        if (cleanCode.length >= 2) {
+          handleBarcodeScanned(cleanCode);
           buffer = '';
         }
       } else if (e.key.length === 1) {
@@ -119,17 +127,47 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
     setScanFeedback(result.message);
 
-    if (result.patient) {
-      setScannedPatient(result.patient);
-      setSearchTerm(result.patient.id);
+    if (result.type === 'prescription' && result.prescription) {
+      setMatchedScanResult({
+        type: 'prescription',
+        id: result.prescription.id,
+        prescription: result.prescription,
+      });
+      if (result.patient) {
+        setScannedPatient(result.patient);
+        setSearchTerm(result.patient.id);
+      }
       stopCamera();
-    } else if (result.admission) {
-      const foundP = patients.find((p) => p.id === result.admission?.patientId);
+    } else if (result.type === 'invoice' && result.invoice) {
+      setMatchedScanResult({
+        type: 'invoice',
+        id: result.invoice.id,
+        invoice: result.invoice,
+      });
+      if (result.patient) {
+        setScannedPatient(result.patient);
+        setSearchTerm(result.patient.id);
+      }
+      stopCamera();
+    } else if (result.type === 'admission' && result.admission) {
+      setMatchedScanResult({
+        type: 'admission',
+        id: result.admission.id,
+      });
+      const foundP = result.patient || patients.find((p) => p.id === result.admission?.patientId);
       if (foundP) {
         setScannedPatient(foundP);
         setSearchTerm(foundP.id);
-        stopCamera();
       }
+      stopCamera();
+    } else if (result.patient) {
+      setMatchedScanResult({
+        type: 'patient',
+        id: result.patient.id,
+      });
+      setScannedPatient(result.patient);
+      setSearchTerm(result.patient.id);
+      stopCamera();
     }
   };
 
@@ -216,6 +254,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setScannedPatient(null);
       setSearchTerm('');
       setScanFeedback(null);
+      setMatchedScanResult(null);
     } else {
       fastScannerRef.current?.resetScannedMemory();
     }
@@ -353,19 +392,44 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
         {/* Quick Demo Barcode Buttons */}
         <div className="px-4 py-2 bg-emerald-50/70 border-b border-emerald-100 flex items-center gap-2 overflow-x-auto text-xs text-emerald-900">
-          <span className="font-semibold text-emerald-800 whitespace-nowrap">Demo Scan Test:</span>
-          {patients.map(p => (
+          <span className="font-semibold text-emerald-800 whitespace-nowrap">দ্রুত টেস্ট (Quick Test):</span>
+          {patients.slice(0, 3).map(p => (
             <button
               key={p.id}
               onClick={() => handleBarcodeScanned(p.id)}
-              className="px-2.5 py-1 rounded-md bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors font-mono whitespace-nowrap flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1 rounded-md bg-white border border-teal-200 text-teal-800 hover:bg-teal-600 hover:text-white transition-colors font-mono whitespace-nowrap flex items-center gap-1 cursor-pointer shadow-2xs"
+              title={`পেশেন্ট আইডি: ${p.name}`}
             >
               <span>{p.name.split(' ')[0]}</span>
               <span className="text-[10px] opacity-75 font-semibold">({p.id})</span>
             </button>
           ))}
+          {prescriptions.slice(0, 2).map(rx => (
+            <button
+              key={rx.id}
+              onClick={() => handleBarcodeScanned(rx.id)}
+              className="px-2.5 py-1 rounded-md bg-white border border-indigo-200 text-indigo-800 hover:bg-indigo-600 hover:text-white transition-colors font-mono whitespace-nowrap flex items-center gap-1 cursor-pointer shadow-2xs"
+              title={`প্রেসক্রিপশন: ${rx.id}`}
+            >
+              <FileText className="w-3 h-3 text-indigo-500" />
+              <span>প্রেসক্রিপশন</span>
+              <span className="text-[10px] opacity-75 font-semibold">({rx.id})</span>
+            </button>
+          ))}
+          {invoices.slice(0, 2).map(inv => (
+            <button
+              key={inv.id}
+              onClick={() => handleBarcodeScanned(inv.id)}
+              className="px-2.5 py-1 rounded-md bg-white border border-emerald-300 text-emerald-900 hover:bg-emerald-600 hover:text-white transition-colors font-mono whitespace-nowrap flex items-center gap-1 cursor-pointer shadow-2xs"
+              title={`মানি রিসিট: ${inv.id}`}
+            >
+              <Receipt className="w-3 h-3 text-emerald-600" />
+              <span>মানি রিসিট</span>
+              <span className="text-[10px] opacity-75 font-semibold">({inv.id})</span>
+            </button>
+          ))}
           {scanFeedback && (
-            <span className="ml-auto text-xs font-medium text-emerald-800 bg-emerald-200/60 px-2 py-0.5 rounded">
+            <span className="ml-auto text-xs font-semibold text-emerald-900 bg-emerald-200/80 px-2.5 py-1 rounded-md shadow-2xs whitespace-nowrap">
               {scanFeedback}
             </span>
           )}
@@ -385,6 +449,67 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Direct Scanned Document Match Banner */}
+              {matchedScanResult && (matchedScanResult.type === 'prescription' || matchedScanResult.type === 'invoice') && (
+                <div className={`p-4 rounded-2xl border shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn ${
+                  matchedScanResult.type === 'prescription'
+                    ? 'bg-gradient-to-r from-teal-50 via-teal-100/60 to-emerald-50 border-teal-300 text-teal-900'
+                    : 'bg-gradient-to-r from-emerald-50 via-emerald-100/60 to-cyan-50 border-emerald-300 text-emerald-900'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl text-white ${
+                      matchedScanResult.type === 'prescription' ? 'bg-teal-700' : 'bg-emerald-700'
+                    }`}>
+                      {matchedScanResult.type === 'prescription' ? (
+                        <FileText className="w-5 h-5" />
+                      ) : (
+                        <Receipt className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-white/80 border border-slate-300">
+                          {matchedScanResult.type === 'prescription' ? 'PRESCRIPTION SCANNED' : 'MONEY RECEIPT SCANNED'}
+                        </span>
+                        <span className="font-mono font-black text-sm">{matchedScanResult.id}</span>
+                      </div>
+                      <p className="text-xs font-semibold mt-0.5 opacity-90">
+                        {matchedScanResult.type === 'prescription'
+                          ? `প্রেসক্রিপশনটি সফলভাবে স্ক্যান করা হয়েছে (ডাঃ ${matchedScanResult.prescription?.doctorName || 'উপলব্ধ'})`
+                          : `মানি রিসিট / বিল সফলভাবে স্ক্যান করা হয়েছে (মোট: BDT ${matchedScanResult.invoice?.total || 0})`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {matchedScanResult.type === 'prescription' && matchedScanResult.prescription && (
+                      <button
+                        onClick={() => {
+                          onOpenPrescriptionPrint?.(matchedScanResult.prescription!);
+                          onClose();
+                        }}
+                        className="px-3.5 py-1.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>প্রেসক্রিপশন দেখুন / প্রিন্ট</span>
+                      </button>
+                    )}
+                    {matchedScanResult.type === 'invoice' && matchedScanResult.invoice && (
+                      <button
+                        onClick={() => {
+                          onOpenInvoicePrint?.(matchedScanResult.invoice!);
+                          onClose();
+                        }}
+                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>মানি রিসিট দেখুন / প্রিন্ট</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Patient Top Summary Card */}
               <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-5 items-start justify-between">
                 <div className="flex gap-4 items-start">
@@ -615,41 +740,55 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                     <p className="text-xs text-slate-400 py-6 text-center">No bill generated yet</p>
                   ) : (
                     <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                      {patientInvoices.map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all text-xs"
-                        >
-                          <div className="flex items-center justify-between font-medium">
-                            <span className="font-mono text-slate-800 font-bold">{inv.id}</span>
-                            <span className="text-slate-400">{inv.date}</span>
+                      {patientInvoices.map((inv) => {
+                        const isDirectMatch = matchedScanResult?.id === inv.id;
+                        return (
+                          <div
+                            key={inv.id}
+                            className={`p-3 rounded-xl border transition-all text-xs ${
+                              isDirectMatch
+                                ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500 shadow-md'
+                                : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between font-medium">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-slate-800 font-bold">{inv.id}</span>
+                                {isDirectMatch && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-600 text-white animate-pulse">
+                                    Scanned Match ✓
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-slate-400">{inv.date}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-1 text-slate-600">
+                              <span>Total: BDT {inv.total} | Paid: BDT {inv.paidAmount}</span>
+                              {inv.dueAmount > 0 ? (
+                                <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                  Due: BDT {inv.dueAmount}
+                                </span>
+                              ) : (
+                                <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                  Paid ✓
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  onOpenInvoicePrint?.(inv);
+                                  onClose();
+                                }}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Printer className="w-3 h-3 text-slate-500" />
+                                Print Receipt
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between mt-1 text-slate-600">
-                            <span>Total: BDT {inv.total} | Paid: BDT {inv.paidAmount}</span>
-                            {inv.dueAmount > 0 ? (
-                              <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                Due: BDT {inv.dueAmount}
-                              </span>
-                            ) : (
-                              <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                Paid ✓
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                onOpenInvoicePrint?.(inv);
-                                onClose();
-                              }}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 flex items-center gap-1 cursor-pointer"
-                            >
-                              <Printer className="w-3 h-3 text-slate-500" />
-                              Print Receipt
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -667,34 +806,48 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                     <p className="text-xs text-slate-400 py-6 text-center">No prescriptions written yet</p>
                   ) : (
                     <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                      {patientPrescriptions.map((rx) => (
-                        <div
-                          key={rx.id}
-                          className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all text-xs"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-teal-700">{rx.id}</span>
-                            <span className="text-slate-400">{rx.date}</span>
+                      {patientPrescriptions.map((rx) => {
+                        const isDirectMatch = matchedScanResult?.id === rx.id;
+                        return (
+                          <div
+                            key={rx.id}
+                            className={`p-3 rounded-xl border transition-all text-xs ${
+                              isDirectMatch
+                                ? 'bg-teal-50/90 border-teal-400 ring-2 ring-teal-500 shadow-md'
+                                : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-teal-700">{rx.id}</span>
+                                {isDirectMatch && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-teal-600 text-white animate-pulse">
+                                    Scanned Match ✓
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-slate-400">{rx.date}</span>
+                            </div>
+                            <p className="font-semibold text-slate-800 mt-1">{rx.doctorName}</p>
+                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                              Diagnosis: {rx.diagnosis || 'General Checkup'}
+                            </p>
+                            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                              <span>Medicines: {rx.medicines.length}</span>
+                              <button
+                                onClick={() => {
+                                  onOpenPrescriptionPrint?.(rx);
+                                  onClose();
+                                }}
+                                className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded font-semibold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Printer className="w-3 h-3 text-teal-600" />
+                                Print Prescription
+                              </button>
+                            </div>
                           </div>
-                          <p className="font-semibold text-slate-800 mt-1">{rx.doctorName}</p>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                            Diagnosis: {rx.diagnosis || 'General Checkup'}
-                          </p>
-                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                            <span>Medicines: {rx.medicines.length}</span>
-                            <button
-                              onClick={() => {
-                                onOpenPrescriptionPrint?.(rx);
-                                onClose();
-                              }}
-                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded font-semibold flex items-center gap-1 cursor-pointer"
-                            >
-                              <Printer className="w-3 h-3 text-teal-600" />
-                              Print Prescription
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

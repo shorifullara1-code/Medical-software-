@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Printer, Download } from 'lucide-react';
 import { LabReport, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
@@ -19,6 +19,9 @@ export const LabReportPrintModal: React.FC<LabReportPrintModalProps> = ({
   if (!report) return null;
 
   const hospitalSettings = propSettings || loadHospitalSettings();
+  const [barcodeType, setBarcodeType] = useState<'patient' | 'lab'>('patient');
+
+  const activeBarcodeValue = barcodeType === 'patient' ? report.patientId : (report.id || 'LAB-2026-1001');
 
   const handlePrint = () => {
     window.print();
@@ -48,13 +51,41 @@ export const LabReportPrintModal: React.FC<LabReportPrintModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-4xl my-auto overflow-hidden">
         {/* Top Control Bar (Screen only) */}
-        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
               {report.id}
             </span>
             <span className="text-sm font-medium">Official Lab Report Template Preview (A4)</span>
           </div>
+
+          {/* Barcode Mode Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+            <span className="text-slate-400 font-semibold px-1 text-[11px]">Barcode:</span>
+            <button
+              onClick={() => setBarcodeType('patient')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'patient'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Health Card Mode (Same barcode as Patient ID card) - guaranteed scanner detection"
+            >
+              Patient ID ({report.patientId})
+            </button>
+            <button
+              onClick={() => setBarcodeType('lab')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'lab'
+                  ? 'bg-indigo-500 text-white font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Lab Report ID barcode"
+            >
+              Lab ID ({report.id})
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
@@ -102,33 +133,26 @@ export const LabReportPrintModal: React.FC<LabReportPrintModalProps> = ({
             </div>
 
             {/* 2. THE EXACT PATIENT & DUAL-BARCODE FRAMED BOX (Matching User's Uploaded Image) */}
-            <div className="border border-slate-600 text-xs mb-5 bg-white/90">
-              {/* Top row with Two Barcodes and Center Title */}
-              <div className="px-3 pt-2 pb-1.5 border-b border-slate-600 flex items-center justify-between gap-2">
-                {/* Left Barcode */}
-                <div className="flex flex-col items-start w-40 shrink-0">
-                  <BarcodeRenderer
-                    value={report.invoiceId || '12610069432'}
-                    height={26}
-                    width={1.2}
-                    displayValue={false}
-                  />
-                </div>
+            <div className="border border-slate-600 text-xs mb-5 bg-white">
+              {/* Center Title (Exact style: Hormone REPORT) */}
+              <div className="px-3 pt-2.5 pb-2 border-b border-slate-300 text-center">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide font-sans">
+                  {reportCategoryTitle}
+                </h2>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Diagnostic & Pathology Investigation Report
+                </span>
+              </div>
 
-                {/* Center Title (Exact style: Hormone REPORT) */}
-                <div className="flex-1 text-center">
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide font-sans">
-                    {reportCategoryTitle}
-                  </h2>
-                </div>
-
-                {/* Right Barcode */}
-                <div className="flex flex-col items-end w-40 shrink-0">
+              {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
+              <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
                   <BarcodeRenderer
-                    value={report.id || '12610309551'}
-                    height={26}
-                    width={1.2}
-                    displayValue={false}
+                    value={activeBarcodeValue}
+                    height={48}
+                    width={1.8}
+                    fontSize={12}
+                    margin={14}
                   />
                 </div>
               </div>

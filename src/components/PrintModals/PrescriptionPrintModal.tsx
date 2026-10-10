@@ -21,6 +21,9 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
   const hospitalSettings = propSettings || loadHospitalSettings();
   const [printMode, setPrintMode] = useState<'blank' | 'digital'>('blank');
   const [lineStyle, setLineStyle] = useState<'ruled' | 'clean'>('ruled');
+  const [barcodeType, setBarcodeType] = useState<'patient' | 'rx'>('patient');
+
+  const activeBarcodeValue = barcodeType === 'patient' ? prescription.patientId : prescription.id;
 
   const handlePrint = () => {
     window.print();
@@ -36,6 +39,33 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
               {prescription.id}
             </span>
             <span className="text-xs sm:text-sm font-medium">Prescription Print Preview (Print Ready A4)</span>
+          </div>
+
+          {/* Barcode Mode Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+            <span className="text-slate-400 font-semibold px-1 text-[11px]">Barcode:</span>
+            <button
+              onClick={() => setBarcodeType('patient')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'patient'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Health Card Mode (Same barcode as Patient ID card) - guaranteed scanner detection"
+            >
+              Patient ID ({prescription.patientId})
+            </button>
+            <button
+              onClick={() => setBarcodeType('rx')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'rx'
+                  ? 'bg-indigo-500 text-white font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Prescription Number barcode"
+            >
+              Rx No ({prescription.id})
+            </button>
           </div>
 
           {/* Mode Switcher */}
@@ -120,26 +150,26 @@ export const PrescriptionPrintModal: React.FC<PrescriptionPrintModalProps> = ({
               </div>
             </div>
 
-            {/* Doctor & Dual Barcode Box */}
-            <div className="border border-slate-600 p-3 mb-4 bg-white/90">
-              <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-400">
-                <div className="flex flex-col items-start w-36 shrink-0">
-                  <span className="text-[9px] font-bold text-slate-600 uppercase mb-0.5">PATIENT ID</span>
-                  <BarcodeRenderer value={prescription.patientId} height={26} width={1.2} displayValue={false} />
-                  <span className="text-[8px] font-mono text-slate-500 font-bold">{prescription.patientId}</span>
-                </div>
+            {/* Doctor & Dual High-Scannability Barcode Box */}
+            <div className="border border-slate-600 p-3 mb-4 bg-white">
+              {/* Doctor Details Header */}
+              <div className="text-center pb-2.5 border-b border-slate-300">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide">{prescription.doctorName}</h2>
+                <p className="text-xs text-slate-700 font-semibold">{prescription.doctorDegrees}</p>
+                <p className="text-xs font-bold text-purple-900">{prescription.doctorSpecialty}</p>
+                <p className="text-[10px] font-mono text-slate-500 font-bold">{prescription.doctorBmdc}</p>
+              </div>
 
-                <div className="flex-1 text-center">
-                  <h2 className="text-base font-bold text-slate-900">{prescription.doctorName}</h2>
-                  <p className="text-xs text-slate-700 font-semibold">{prescription.doctorDegrees}</p>
-                  <p className="text-xs font-bold text-purple-900">{prescription.doctorSpecialty}</p>
-                  <p className="text-[10px] font-mono text-slate-500">{prescription.doctorBmdc}</p>
-                </div>
-
-                <div className="flex flex-col items-end w-36 shrink-0">
-                  <span className="text-[9px] font-bold text-slate-600 uppercase mb-0.5">PRESCRIPTION ID</span>
-                  <BarcodeRenderer value={prescription.id} height={26} width={1.2} displayValue={false} />
-                  <span className="text-[8px] font-mono text-slate-500 font-bold">{prescription.id}</span>
+              {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
+              <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
+                  <BarcodeRenderer
+                    value={activeBarcodeValue}
+                    height={48}
+                    width={1.8}
+                    fontSize={12}
+                    margin={14}
+                  />
                 </div>
               </div>
 

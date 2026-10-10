@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Printer, Download, FileText, CheckCircle2, ShieldCheck, HeartPulse, Stethoscope, AlertTriangle } from 'lucide-react';
 import { DischargeSummary, HospitalSettings } from '../../types';
 import { BarcodeRenderer } from '../BarcodeRenderer';
@@ -19,6 +19,9 @@ export const DischargeSummaryPrintModal: React.FC<DischargeSummaryPrintModalProp
   if (!summary) return null;
 
   const hospitalSettings = propSettings || loadHospitalSettings();
+  const [barcodeType, setBarcodeType] = useState<'patient' | 'discharge'>('patient');
+
+  const activeBarcodeValue = barcodeType === 'patient' ? summary.patientId : summary.id;
 
   const handlePrint = () => {
     window.print();
@@ -28,7 +31,7 @@ export const DischargeSummaryPrintModal: React.FC<DischargeSummaryPrintModalProp
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-4xl my-auto overflow-hidden">
         {/* Top Control Bar (Screen only) */}
-        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+        <div className="no-print px-6 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
               {summary.id}
@@ -37,6 +40,34 @@ export const DischargeSummaryPrintModal: React.FC<DischargeSummaryPrintModalProp
               Official Inpatient Discharge Summary Certificate (Print Ready A4)
             </span>
           </div>
+
+          {/* Barcode Mode Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+            <span className="text-slate-400 font-semibold px-1 text-[11px]">Barcode:</span>
+            <button
+              onClick={() => setBarcodeType('patient')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'patient'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Health Card Mode (Same barcode as Patient ID card) - guaranteed scanner detection"
+            >
+              Patient ID ({summary.patientId})
+            </button>
+            <button
+              onClick={() => setBarcodeType('discharge')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                barcodeType === 'discharge'
+                  ? 'bg-indigo-500 text-white font-black shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Discharge ID barcode"
+            >
+              Discharge No ({summary.id})
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
@@ -89,28 +120,27 @@ export const DischargeSummaryPrintModal: React.FC<DischargeSummaryPrintModalProp
               </div>
 
               {/* 2. DUAL-BARCODE & PATIENT ADMISSION BOX */}
-              <div className="border border-slate-600 text-xs mb-4 bg-white/90">
-                {/* Barcode and Title Header */}
-                <div className="px-3 pt-2 pb-1.5 border-b border-slate-600 flex items-center justify-between gap-2">
-                  <div className="flex flex-col items-start w-36 shrink-0">
-                    <span className="text-[8px] font-bold text-slate-600 uppercase">PATIENT ID</span>
-                    <BarcodeRenderer value={summary.patientId} height={24} width={1.1} displayValue={false} />
-                    <span className="text-[8px] font-mono text-slate-500 font-bold">{summary.patientId}</span>
-                  </div>
+              <div className="border border-slate-600 text-xs mb-4 bg-white">
+                {/* Title Header */}
+                <div className="px-3 pt-2.5 pb-2 border-b border-slate-300 text-center">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide uppercase font-sans">
+                    INPATIENT DISCHARGE SUMMARY CERTIFICATE
+                  </h2>
+                  <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Condition at Discharge: {summary.conditionAtDischarge}
+                  </span>
+                </div>
 
-                  <div className="flex-1 text-center">
-                    <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-wide uppercase font-sans">
-                      INPATIENT DISCHARGE SUMMARY CERTIFICATE
-                    </h2>
-                    <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Condition at Discharge: {summary.conditionAtDischarge}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col items-end w-36 shrink-0">
-                    <span className="text-[8px] font-bold text-slate-600 uppercase">DISCHARGE REF</span>
-                    <BarcodeRenderer value={summary.id} height={24} width={1.1} displayValue={false} />
-                    <span className="text-[8px] font-mono text-slate-500 font-bold">{summary.id}</span>
+                {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
+                <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
+                    <BarcodeRenderer
+                      value={activeBarcodeValue}
+                      height={48}
+                      width={1.8}
+                      fontSize={12}
+                      margin={14}
+                    />
                   </div>
                 </div>
 

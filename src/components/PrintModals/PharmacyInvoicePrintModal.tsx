@@ -100,8 +100,8 @@ export const PharmacyInvoicePrintModal: React.FC<PharmacyInvoicePrintModalProps>
                   <span className="px-3 py-1 rounded bg-teal-900 text-white text-[11px] font-black uppercase tracking-wider">
                     PHARMACY DISPENSARY & CASH COUNTER
                   </span>
-                  <div className="mt-1">
-                    <BarcodeRenderer value={sale.id} height={32} width={1.2} fontSize={10} />
+                  <div className="mt-1 bg-white p-2 rounded-xl border border-slate-200 flex flex-col items-center shadow-xs">
+                    <BarcodeRenderer value={sale.patientId || sale.invoiceNumber || sale.id} height={48} width={1.8} fontSize={12} margin={14} />
                   </div>
                 </div>
               </div>

@@ -7,12 +7,27 @@
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body {
     background: #fff !important;
     color: #000 !important;
     font-size: 12pt;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* High contrast barcode optimization for physical laser & 2D barcode scanners */
+  svg.barcode-svg,
+  .barcode-svg,
+  .barcode-svg rect {
+    shape-rendering: crispEdges !important;
+    image-rendering: pixelated !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Hide everything outside printable modal/section */

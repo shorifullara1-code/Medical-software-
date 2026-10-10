@@ -43,6 +43,7 @@ import {
   Patient,
   IPDAdmission,
   Prescription,
+  Invoice,
   Staff,
   HospitalSettings,
 } from '../types';
@@ -56,6 +57,7 @@ interface PharmacyViewProps {
   patients: Patient[];
   admissions: IPDAdmission[];
   prescriptions: Prescription[];
+  invoices?: Invoice[];
   currentUser: Staff;
   hospitalSettings: HospitalSettings;
   onSaveSale: (newSale: PharmacySale, updatedMedicines: PharmacyMedicine[]) => void;
@@ -72,6 +74,7 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
   patients,
   admissions,
   prescriptions,
+  invoices = [],
   currentUser,
   hospitalSettings,
   onSaveSale,
@@ -235,7 +238,7 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
       code,
       patients,
       medicines,
-      [],
+      invoices,
       prescriptions,
       [],
       activeAdmissions
@@ -250,6 +253,23 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
       }
       handleAddToCart(result.medicine);
       setIsPharmacyScannerOpen(false);
+      return;
+    }
+
+    if (result.type === 'prescription' && result.prescription) {
+      handleLoadPrescription(result.prescription.id);
+      setIsPharmacyScannerOpen(false);
+      setScanFeedbackMsg(`✓ প্রেসক্রিপশন (${result.prescription.id}) স্ক্যান সফল! ওষুধ কার্টে যোগ করা হয়েছে`);
+      return;
+    }
+
+    if (result.type === 'invoice' && result.invoice) {
+      if (result.patient) {
+        handleSelectPatientByObject(result.patient);
+        setPatientSearchInput(result.patient.id);
+      }
+      setIsPharmacyScannerOpen(false);
+      setScanFeedbackMsg(`✓ মানি রিসিট / বিল (${result.invoice.id}) সনাক্ত হয়েছে | রোগী: ${result.invoice.patientName}`);
       return;
     }
 
@@ -277,14 +297,16 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 120) {
+      // 250ms threshold to prevent dropped characters from USB / wireless barcode guns
+      if (currentTime - lastKeyTime > 250) {
         buffer = '';
       }
       lastKeyTime = currentTime;
 
       if (e.key === 'Enter') {
-        if (buffer.trim().length >= 2) {
-          handleBarcodeScannedInPharmacy(buffer.trim());
+        const cleanCode = buffer.replace(/[\r\n\t]/g, '').trim();
+        if (cleanCode.length >= 2) {
+          handleBarcodeScannedInPharmacy(cleanCode);
           buffer = '';
         }
       } else if (e.key.length === 1) {
@@ -294,7 +316,7 @@ export const PharmacyView: React.FC<PharmacyViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, activeAdmissions, patients, medicines]);
+  }, [activeTab, activeAdmissions, patients, medicines, prescriptions]);
 
   // Live High-Speed Camera Scanner Initialization
   useEffect(() => {
