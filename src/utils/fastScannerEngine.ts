@@ -188,7 +188,7 @@ export class FastBarcodeEngine {
     const processFrame = async () => {
       if (!this.isScanning || !this.videoElement) return;
 
-      if (this.videoElement.readyState === this.videoElement.HAVE_ENOUGH_DATA) {
+      if (this.videoElement.readyState >= 2) {
         try {
           // 1. Native GPU scan on full video element (Sub-3ms)
           const barcodes = await this.nativeDetector.detect(this.videoElement);
@@ -247,20 +247,22 @@ export class FastBarcodeEngine {
       verbose: false,
     });
 
-    // Request high resolution camera stream so printed paper barcodes have crisp multi-pixel bars
+    // Safe camera constraints that work across all mobile phones, laptops, and webcams
     const cameraConfig: any = {
       facingMode: 'environment',
-      width: { min: 1280, ideal: 1920 },
-      height: { min: 720, ideal: 1080 },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
     };
 
-    // Optimized scanning: generous scanning area so full paper barcode and quiet zones are never clipped
+    // Safe responsive qrbox that never exceeds viewfinder dimensions
     const config: any = {
       fps: 25,
       qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+        const w = Math.min(Math.floor(viewfinderWidth * 0.88), viewfinderWidth - 10);
+        const h = Math.min(Math.floor(viewfinderHeight * 0.7), viewfinderHeight - 10);
         return {
-          width: Math.max(Math.floor(viewfinderWidth * 0.94), 280),
-          height: Math.max(Math.floor(viewfinderHeight * 0.85), 180),
+          width: Math.max(w, 50),
+          height: Math.max(h, 50),
         };
       },
       experimentalFeatures: {

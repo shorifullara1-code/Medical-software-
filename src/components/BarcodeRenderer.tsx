@@ -18,15 +18,15 @@ interface BarcodeRendererProps {
 export const BarcodeRenderer: React.FC<BarcodeRendererProps> = ({
   value,
   format = 'CODE128',
-  width = 1.8,
-  height = 50,
+  width = 1.5,
+  height = 44,
   displayValue = true,
-  fontSize = 12,
-  textMargin = 4,
+  fontSize = 11,
+  textMargin = 3,
   className = '',
   background = '#ffffff',
   lineColor = '#000000',
-  margin = 14,
+  margin = 8,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -37,8 +37,8 @@ export const BarcodeRenderer: React.FC<BarcodeRendererProps> = ({
       const cleanValue = String(value).trim();
       JsBarcode(svgRef.current, cleanValue, {
         format,
-        width: Math.max(width, 1.6),
-        height: Math.max(height, 46),
+        width: Math.max(width, 1.4),
+        height: Math.max(height, 40),
         displayValue,
         font: 'JetBrains Mono, monospace',
         fontOptions: 'bold',
@@ -46,10 +46,9 @@ export const BarcodeRenderer: React.FC<BarcodeRendererProps> = ({
         textMargin,
         background: background || '#ffffff',
         lineColor: lineColor || '#000000',
-        margin: Math.max(margin, 12),
+        margin: Math.max(margin, 6),
       });
 
-      // Ensure SVG maintains exact un-stretched barcode proportions for laser & camera scanners
       const svg = svgRef.current;
       if (svg) {
         svg.classList.add('barcode-svg');
@@ -61,16 +60,13 @@ export const BarcodeRenderer: React.FC<BarcodeRendererProps> = ({
           if (numW > 0 && numH > 0) {
             svg.setAttribute('viewBox', `0 0 ${numW} ${numH}`);
             svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            // Maintain exact 1:1 pixel width up to 100% parent container - NEVER stretch beyond native size
-            svg.style.width = `${numW}px`;
             svg.style.maxWidth = '100%';
-            svg.style.height = `${numH}px`;
+            svg.style.height = 'auto';
             svg.style.display = 'block';
             svg.style.margin = '0 auto';
           }
         }
 
-        // Apply crisp edges to all rect elements
         const rects = svg.querySelectorAll('rect');
         rects.forEach((r) => {
           r.setAttribute('shape-rendering', 'crispEdges');

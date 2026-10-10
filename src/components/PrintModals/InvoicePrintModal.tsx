@@ -19,9 +19,6 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
   if (!invoice) return null;
 
   const hospitalSettings = propSettings || loadHospitalSettings();
-  const [barcodeType, setBarcodeType] = useState<'patient' | 'invoice'>('patient');
-
-  const activeBarcodeValue = barcodeType === 'patient' ? invoice.patientId : invoice.id;
 
   const handlePrint = () => {
     window.print();
@@ -43,31 +40,11 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
             </span>
           </div>
 
-          {/* Barcode Mode Switcher */}
-          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
-            <span className="text-slate-400 font-semibold px-1 text-[11px]">Barcode:</span>
-            <button
-              onClick={() => setBarcodeType('patient')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                barcodeType === 'patient'
-                  ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-              title="Health Card Mode (Same barcode as Patient ID card) - guaranteed scanner detection"
-            >
-              Patient ID ({invoice.patientId})
-            </button>
-            <button
-              onClick={() => setBarcodeType('invoice')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                barcodeType === 'invoice'
-                  ? 'bg-indigo-500 text-white font-black shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-              title="Invoice Number barcode"
-            >
-              Invoice No ({invoice.id})
-            </button>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-3 py-1 rounded-lg bg-slate-800 text-emerald-400 font-semibold border border-slate-700 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Dual Barcode: Patient ID (Left) & Receipt No (Right)
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -129,15 +106,35 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                   </span>
                 </div>
 
-                {/* Clean Master Barcode Strip (Health Card Compatible Layout & Ultra-Fast Scanning) */}
-                <div className="py-2 border-b border-slate-300 flex flex-col items-center justify-center bg-white">
-                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs my-1 w-full max-w-sm flex flex-col items-center">
+                {/* Dual-Barcode Strip: Left = Patient ID, Right = Invoice Barcode */}
+                <div className="p-3 border-b border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/50">
+                  {/* Left: Patient ID Barcode (Identical to Health Card) */}
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                      Patient Health ID Barcode
+                    </span>
                     <BarcodeRenderer
-                      value={activeBarcodeValue}
-                      height={48}
-                      width={1.8}
-                      fontSize={12}
-                      margin={14}
+                      value={invoice.patientId}
+                      height={44}
+                      width={1.5}
+                      fontSize={11}
+                      margin={8}
+                    />
+                  </div>
+
+                  {/* Right: Invoice No Barcode */}
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                      Money Receipt / Bill Barcode
+                    </span>
+                    <BarcodeRenderer
+                      value={invoice.id}
+                      height={44}
+                      width={1.5}
+                      fontSize={11}
+                      margin={8}
                     />
                   </div>
                 </div>
